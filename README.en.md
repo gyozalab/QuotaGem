@@ -11,9 +11,25 @@ With QuotaGem, you can quickly check:
 - reset times
 - warning and danger thresholds
 
-![QuotaGem preview mockup](./docs/images/quota-gem-preview-mockup.svg)
+![QuotaGem expanded panel](./docs/images/expanded-panel.png)
 
-> This image is a polished README mockup for now. It will be replaced with real product screenshots next.
+## Screenshots
+
+### Compact panel
+
+![QuotaGem compact panel](./docs/images/compact-panel.png)
+
+### Settings panel
+
+![QuotaGem settings panel](./docs/images/settings-panel.png)
+
+### Light theme
+
+![QuotaGem light expanded panel](./docs/images/expanded-panel-white.png)
+
+### Tray icon
+
+![QuotaGem tray icon](./docs/images/tray-icon-list.png)
 
 ## What It Offers
 
@@ -54,7 +70,6 @@ The core experience is already working:
 
 ## Next Up
 
-- replace the mockup with real product screenshots
 - prepare the Windows `.exe` packaging flow
 - verify launch-at-login and tray behavior in the packaged app
 

@@ -11,9 +11,25 @@
 - 重設時間
 - 警告與危險門檻
 
-![QuotaGem 預覽圖](./docs/images/quota-gem-preview-mockup.svg)
+![QuotaGem 展開面板](./docs/images/expanded-panel.png)
 
-> 目前這張是 README 展示用 mockup。下一步會換成真實使用截圖。
+## 畫面預覽
+
+### 精簡面板
+
+![QuotaGem 精簡面板](./docs/images/compact-panel.png)
+
+### 設定面板
+
+![QuotaGem 設定面板](./docs/images/settings-panel.png)
+
+### 淺色主題
+
+![QuotaGem 淺色展開面板](./docs/images/expanded-panel-white.png)
+
+### 系統匣圖示
+
+![QuotaGem tray icon](./docs/images/tray-icon-list.png)
 
 ## 你可以期待什麼
 
@@ -54,7 +70,6 @@ npm run dev
 
 ## 接下來
 
-- 補上真實產品截圖
 - 準備 Windows `.exe` 打包流程
 - 驗證安裝版的開機啟動與 tray 行為
 
