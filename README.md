@@ -2,7 +2,7 @@
 
 繁體中文 | [English](./README.en.md)
 
-<img src="./docs/images/cover.png" alt="QuotaGem 封面圖" width="45%" />
+<img src="./docs/images/cover.png" alt="QuotaGem 封面圖" width="60%" />
 
 
 一個為 `Claude` 與 `Codex` 用量而生的 Windows 系統匣小工具。
@@ -25,8 +25,8 @@
 ### 單獨顯示 Claude 或 Codex
 
 <p>
-  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="27%" />
-  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="27%" />
+  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="33%" />
+  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="33%" />
 </p>
 
 ### 設定面板
