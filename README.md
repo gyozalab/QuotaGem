@@ -1,77 +1,61 @@
 # QuotaGem
 
-繁體中文 | [English](README.en.md)
+繁體中文 | [English](./README.en.md)
 
-Windows 系統匣 App，把 `Claude` 和 `Codex` 的用量整合在同一個地方查看。
+一個為 `Claude` 與 `Codex` 用量而生的 Windows 系統匣小工具。
 
-## 功能
+它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
 
-- 系統匣常駐，支援**展開面板**與**精簡面板**兩種模式
-- 同時顯示兩個服務的用量，或單獨查看 `Claude` / `Codex`
-- 用量進度條依比例變色（可自訂警告與危險門檻）
-- 背景用量通知（單次 Session 與每週用量）
-- `Connect Claude` 登入流程
-- 面板個人化設定：
-  - 主題
-  - 透明度
-  - 縮放比例
-  - 語言
-  - 時間格式
-  - 日期格式
-- 可選擇**開機自動啟動**
+- 目前用量
+- Session 與 Weekly 狀態
+- 重設時間
+- 警告與危險門檻
 
-## 目前狀態
+![QuotaGem 預覽圖](./docs/images/quota-gem-preview-mockup.svg)
 
-核心功能已可正常運作：
+> 目前這張是 README 展示用 mockup。下一步會換成真實使用截圖。
 
-- 同一時間只顯示一個面板
-- 展開面板與精簡面板可互相切換
-- 面板置頂顯示
-- 關閉按鈕為隱藏語意，不是真的結束程式
-- Codex JSONL 解析（容錯處理格式錯誤的行）
-- 展開面板高度動態調整
-- QuotaGem 品牌圖示與系統匣圖示
+## 你可以期待什麼
 
-## 技術架構
+- 系統匣常駐，打開就看
+- `expanded` 與 `compact` 兩種面板
+- 同時查看 `Claude` 與 `Codex`
+- 也可以只看單一 provider
+- 自訂警告與危險門檻
+- 背景通知提醒
+- 可調整主題、透明度與縮放
+- 內建 `Connect Claude` 流程
 
-- `Electron`
-- `React`
-- `TypeScript`
-- `Vite`
-- `electron-store`
-- `Vitest`
-- `Testing Library`
+## 為什麼做這個
+
+QuotaGem 想解決的是很簡單的一件事：
+
+當你在高頻使用 AI 工具時，不應該等到額度快撞線了才發現。
+
+它不是大型 dashboard，也不是複雜的管理平台。  
+它比較像一顆安靜地待在桌面角落的小寶石，讓你隨時知道現在的使用狀態。
 
 ## 快速開始
 
 ```powershell
+Set-Location 'D:\coding\projects\QuotaGem'
 npm install
 npm run dev
 ```
 
-## 驗證
+## 目前狀態
 
-```powershell
-npm test
-npm run build
-```
+目前核心體驗已經可用：
 
-## 專案結構
+- 面板切換正常
+- 主題與品牌已更新為 `QuotaGem`
+- 通知、門檻、日期格式、面板縮放都已完成
+- 新的獨立 repo 已建立
 
-- `src/main` — Electron 主程序、系統匣連結、服務協調
-- `src/renderer` — React UI、面板渲染、設定、主題樣式
-- `src/providers` — Claude 與 Codex 用量讀取器
-- `src/shared` — 共用狀態、用量格式化、i18n、面板主題輔助函式
-- `public` — 系統匣與品牌圖示
+## 接下來
 
-## 注意事項
+- 補上真實產品截圖
+- 準備 Windows `.exe` 打包流程
+- 驗證安裝版的開機啟動與 tray 行為
 
-- 本專案以 **Windows 優先**開發
-- 開機自動啟動功能已實作，但打包版本尚未完整驗證
-- Claude 附加功能用量尚未支援
-
-## 開發注意
-
-請勿讓編譯產生的 `.js` 或 `.d.ts` 檔案出現在 `src/` 目錄內。
-
-本專案曾有過舊的編譯檔殘留在 `src/`，導致程式載入舊版程式碼而非實際的 `.ts` 原始碼。
+更多實作狀態與交接資訊可看 [`HANDOFF.md`](./HANDOFF.md)。

@@ -1,77 +1,61 @@
 # QuotaGem
 
-[繁體中文](README.md) | English
+[繁體中文](./README.md) | English
 
-A Windows tray app for checking `Claude` and `Codex` usage from one place.
+A Windows tray app for keeping `Claude` and `Codex` usage visible without living in browser tabs.
 
-## Features
+With QuotaGem, you can quickly check:
 
-- Tray-based desktop app with **expanded** and **compact** panels
-- Show both providers together or only `Claude` / `Codex`
-- Quota-aware progress colors with customizable warning and danger thresholds
-- Background usage notifications for session and weekly usage
-- `Connect Claude` login flow
-- Panel personalization:
-  - theme
-  - transparency
-  - scale
-  - language
-  - time format
-  - date format
-- Optional **Launch on Windows sign-in** preference
+- current usage
+- session and weekly status
+- reset times
+- warning and danger thresholds
 
-## Current Status
+![QuotaGem preview mockup](./docs/images/quota-gem-preview-mockup.svg)
 
-The core tray experience is working:
+> This image is a polished README mockup for now. It will be replaced with real product screenshots next.
 
-- One visible panel at a time
-- Compact and expanded panel switching
-- Top-most panel behavior
-- Hide semantics instead of fake app quit semantics
-- Codex JSONL parsing with malformed-line tolerance
-- Dynamic expanded panel height
-- QuotaGem branding assets and tray/header marks
+## What It Offers
 
-## Tech Stack
+- A calm tray-first experience
+- `expanded` and `compact` panels
+- Unified view for `Claude` and `Codex`
+- Single-provider view when you want less noise
+- Custom warning and danger thresholds
+- Background notifications
+- Theme, transparency, and scale controls
+- Built-in `Connect Claude` flow
 
-- `Electron`
-- `React`
-- `TypeScript`
-- `Vite`
-- `electron-store`
-- `Vitest`
-- `Testing Library`
+## Why It Exists
 
-## Getting Started
+QuotaGem is meant for a simple problem:
+
+when you use AI tools heavily, you should not discover your limits too late.
+
+It is not trying to be a giant dashboard or a management suite.  
+It is a small desktop companion that stays nearby and tells you what matters at a glance.
+
+## Quick Start
 
 ```powershell
+Set-Location 'D:\coding\projects\QuotaGem'
 npm install
 npm run dev
 ```
 
-## Verification
+## Current Status
 
-```powershell
-npm test
-npm run build
-```
+The core experience is already working:
 
-## Project Structure
+- panel switching is in place
+- QuotaGem branding is live
+- notifications, thresholds, date formats, and panel scaling are done
+- the project now lives in its own standalone repository
 
-- `src/main` — Electron main process, tray wiring, provider orchestration
-- `src/renderer` — React UI, panel rendering, settings, theme styling
-- `src/providers` — Claude and Codex usage readers
-- `src/shared` — shared state, usage formatting, i18n, panel theme helpers
-- `public` — tray and brand assets
+## Next Up
 
-## Notes
+- replace the mockup with real product screenshots
+- prepare the Windows `.exe` packaging flow
+- verify launch-at-login and tray behavior in the packaged app
 
-- This project is **Windows-first**.
-- Launch-at-login exists in the app, but packaged-build verification is still pending.
-- Claude add-on usage support is not implemented yet.
-
-## Development Pitfall
-
-Do not allow generated `.js` or `.d.ts` files to reappear inside `src/`.
-
-This project previously had stale compiled files in `src/` that caused old code to be loaded instead of the real `.ts` sources.
+For implementation details and handoff notes, see [`HANDOFF.md`](./HANDOFF.md).

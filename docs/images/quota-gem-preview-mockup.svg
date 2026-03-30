@@ -1,0 +1,144 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="220" y1="60" x2="1370" y2="910" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAF7F2"/>
+      <stop offset="1" stop-color="#E8E2D8"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="456" y1="166" x2="1112" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20232C" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#171A20" stop-opacity="0.94"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#2A2E38"/>
+      <stop offset="1" stop-color="#21252D"/>
+    </linearGradient>
+    <linearGradient id="compactPanel" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#F6F2EA"/>
+      <stop offset="1" stop-color="#EEE7DC"/>
+    </linearGradient>
+    <linearGradient id="fillGreen" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#7DA28B"/>
+      <stop offset="1" stop-color="#A8C8B1"/>
+    </linearGradient>
+    <linearGradient id="fillWarn" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#B18E4E"/>
+      <stop offset="1" stop-color="#DABD78"/>
+    </linearGradient>
+    <filter id="shadow" x="300" y="104" width="844" height="816" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="22"/>
+      <feGaussianBlur stdDeviation="34"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0941176 0 0 0 0 0.101961 0 0 0 0 0.129412 0 0 0 0.2 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+    <filter id="softShadow" x="1022" y="544" width="354" height="274" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="16"/>
+      <feGaussianBlur stdDeviation="20"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0941176 0 0 0 0 0.101961 0 0 0 0 0.129412 0 0 0 0.14 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+    <style>
+      .title { font: 700 56px 'Segoe UI', Arial, sans-serif; fill: #1F1F1F; }
+      .subtitle { font: 400 24px 'Segoe UI', Arial, sans-serif; fill: #5E5A54; }
+      .eyebrow { font: 700 16px 'Segoe UI', Arial, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; fill: #6B655E; }
+      .panelMeta { font: 600 18px 'Segoe UI', Arial, sans-serif; fill: #BBC4D2; }
+      .cardTitle { font: 700 20px Georgia, 'Times New Roman', serif; fill: #F3F5F8; }
+      .label { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #DDE4ED; }
+      .value { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #F4F6FA; }
+      .small { font: 500 13px 'Segoe UI', Arial, sans-serif; fill: #9BA6B7; }
+      .compactTitle { font: 700 18px Georgia, 'Times New Roman', serif; fill: #493F37; }
+      .compactText { font: 600 12px 'Segoe UI', Arial, sans-serif; fill: #7A7067; }
+      .compactValue { font: 700 22px 'Segoe UI', Arial, sans-serif; fill: #433A33; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="url(#bg)"/>
+
+  <circle cx="1372" cy="170" r="160" fill="#F2ECE3" fill-opacity="0.88"/>
+  <circle cx="240" cy="878" r="208" fill="#EFE8DD" fill-opacity="0.84"/>
+  <circle cx="1248" cy="824" r="126" fill="#EDE5D9" fill-opacity="0.78"/>
+
+  <text x="150" y="156" class="eyebrow">QuotaGem</text>
+  <text x="150" y="232" class="title">Keep Claude and Codex</text>
+  <text x="150" y="300" class="title">usage close at hand.</text>
+  <text x="150" y="370" class="subtitle">A calm tray app for session resets, weekly usage, thresholds, and quick desktop visibility.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="368" y="150" width="708" height="680" rx="34" fill="url(#panel)"/>
+
+    <text x="416" y="218" class="panelMeta">Updated just now</text>
+    <circle cx="562" cy="210" r="8" fill="#E9EEF7" fill-opacity="0.92"/>
+    <circle cx="588" cy="190" r="4.5" fill="#E9EEF7" fill-opacity="0.92"/>
+    <circle cx="608" cy="228" r="6.2" fill="#E9EEF7" fill-opacity="0.92"/>
+
+    <g>
+      <circle cx="922" cy="208" r="22" fill="#F6F2EA" fill-opacity="0.18" stroke="#EAE5DC" stroke-opacity="0.28"/>
+      <circle cx="974" cy="208" r="22" fill="#F6F2EA" fill-opacity="0.18" stroke="#EAE5DC" stroke-opacity="0.28"/>
+      <circle cx="1026" cy="208" r="22" fill="#F6F2EA" fill-opacity="0.18" stroke="#EAE5DC" stroke-opacity="0.28"/>
+    </g>
+
+    <g transform="translate(412 256)">
+      <rect width="620" height="232" rx="28" fill="url(#card)" stroke="#3A404C"/>
+      <text x="28" y="42" class="cardTitle">Claude</text>
+      <rect x="526" y="22" width="66" height="32" rx="16" fill="#F6F2EA" fill-opacity="0.1"/>
+      <text x="548" y="43" class="small" fill="#DCE3ED">Live</text>
+
+      <text x="28" y="90" class="label">Session</text>
+      <text x="538" y="94" class="value">19%</text>
+      <rect x="28" y="110" width="564" height="8" rx="4" fill="#E8EDF3" fill-opacity="0.24"/>
+      <rect x="28" y="110" width="112" height="8" rx="4" fill="url(#fillGreen)"/>
+      <text x="28" y="146" class="small">Resets</text>
+      <text x="416" y="146" class="small">03/30/2026 19:00 Local</text>
+
+      <text x="28" y="184" class="label">Weekly</text>
+      <text x="538" y="188" class="value">9%</text>
+      <rect x="28" y="204" width="564" height="8" rx="4" fill="#E8EDF3" fill-opacity="0.24"/>
+      <rect x="28" y="204" width="62" height="8" rx="4" fill="url(#fillGreen)"/>
+      <text x="28" y="240" class="small">Resets</text>
+      <text x="424" y="240" class="small">04/05/2026 13:00 Local</text>
+    </g>
+
+    <g transform="translate(412 510)">
+      <rect width="620" height="232" rx="28" fill="url(#card)" stroke="#3A404C"/>
+      <text x="28" y="42" class="cardTitle">Codex</text>
+      <rect x="526" y="22" width="66" height="32" rx="16" fill="#F6F2EA" fill-opacity="0.1"/>
+      <text x="548" y="43" class="small" fill="#DCE3ED">Live</text>
+
+      <text x="28" y="90" class="label">Session</text>
+      <text x="522" y="94" class="value">77%</text>
+      <rect x="28" y="110" width="564" height="8" rx="4" fill="#E8EDF3" fill-opacity="0.24"/>
+      <rect x="28" y="110" width="438" height="8" rx="4" fill="url(#fillWarn)"/>
+      <text x="28" y="146" class="small">Resets</text>
+      <text x="424" y="146" class="small">03/30/2026 16:39 Local</text>
+
+      <text x="28" y="184" class="label">Weekly</text>
+      <text x="522" y="188" class="value">63%</text>
+      <rect x="28" y="204" width="564" height="8" rx="4" fill="#E8EDF3" fill-opacity="0.24"/>
+      <rect x="28" y="204" width="368" height="8" rx="4" fill="url(#fillGreen)"/>
+      <text x="28" y="240" class="small">Resets</text>
+      <text x="422" y="240" class="small">04/03/2026 14:18 Local</text>
+    </g>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="1062" y="568" width="274" height="194" rx="28" fill="url(#compactPanel)"/>
+    <text x="1090" y="614" class="compactText">Compact panel</text>
+
+    <text x="1090" y="658" class="compactTitle">Claude</text>
+    <text x="1262" y="658" class="compactValue">19%</text>
+    <rect x="1090" y="676" width="210" height="8" rx="4" fill="#D6CEC1"/>
+    <rect x="1090" y="676" width="68" height="8" rx="4" fill="url(#fillGreen)"/>
+
+    <text x="1090" y="720" class="compactTitle">Codex</text>
+    <text x="1252" y="720" class="compactValue">77%</text>
+    <rect x="1090" y="738" width="210" height="8" rx="4" fill="#D6CEC1"/>
+    <rect x="1090" y="738" width="154" height="8" rx="4" fill="url(#fillWarn)"/>
+  </g>
+</svg>
