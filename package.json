@@ -8,7 +8,43 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
-    "test:watch": "vitest --config vitest.config.ts"
+    "test:watch": "vitest --config vitest.config.ts",
+    "package": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.gyozalab.quotagem",
+    "productName": "QuotaGem",
+    "copyright": "Copyright © 2025 gyozalab",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "public/tray-icon-runtime.png",
+        "to": "tray-icon-runtime.png"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/quota-gem-app-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "keywords": [
     "electron",
@@ -21,7 +57,7 @@
     "react",
     "typescript"
   ],
-  "author": "",
+  "author": "gyozalab",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -40,6 +76,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.1.0",
+    "electron-builder": "^26.8.1",
     "jsdom": "^29.0.1",
     "rimraf": "^6.1.3",
     "typescript": "^6.0.2",

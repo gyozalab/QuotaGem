@@ -151,7 +151,7 @@ async function loadRenderer(
     return;
   }
 
-  const rendererFile = path.join(process.env.VITE_PUBLIC ?? "", "index.html");
+  const rendererFile = path.join(app.getAppPath(), "dist", "index.html");
   await window.loadURL(`${pathToFileURL(rendererFile).toString()}?mode=${mode}`);
   window.webContents.setZoomFactor(getPanelScaleFactor(getCurrentPanelScale()));
 }
