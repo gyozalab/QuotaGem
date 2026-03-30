@@ -65,12 +65,3 @@ Set-Location 'D:\coding\projects\QuotaGem'
 npm install
 npm run dev
 ```
-
-## 目前狀態
-
-目前核心體驗已經可用：
-
-- 面板切換正常
-- 主題與品牌已更新為 `QuotaGem`
-- 通知、門檻、日期格式、面板縮放都已完成
-- 新的獨立 repo 已建立
