@@ -36,7 +36,7 @@
 
 ### 系統匣圖示
 
-<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="66%" />
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="33%" />
 
 ## 你可以期待什麼
 
@@ -74,9 +74,3 @@ npm run dev
 - 主題與品牌已更新為 `QuotaGem`
 - 通知、門檻、日期格式、面板縮放都已完成
 - 新的獨立 repo 已建立
-
-## 接下來
-
-- 準備 Windows `.exe` 打包流程
-- 驗證安裝版的開機啟動與 tray 行為
-- 依實際使用情境持續微調體驗
