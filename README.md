@@ -58,10 +58,15 @@ QuotaGem 想解決的是很簡單的一件事：
 它不是大型 dashboard，也不是複雜的管理平台。  
 它比較像一顆安靜地待在桌面角落的小寶石，讓你隨時知道現在的使用狀態。
 
-## 快速開始
+## 下載使用
+
+前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的 `QuotaGem-*.exe`，直接執行即可，免安裝。
+
+## 開發者
 
 ```powershell
-Set-Location 'D:\coding\projects\QuotaGem'
+git clone https://github.com/gyozalab/QuotaGem.git
+cd QuotaGem
 npm install
 npm run dev
 ```

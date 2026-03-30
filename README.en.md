@@ -58,10 +58,15 @@ when you use AI tools heavily, you should not discover your limits too late.
 It is not trying to be a giant dashboard or a management suite.  
 It is a small desktop companion that stays nearby and tells you what matters at a glance.
 
-## Quick Start
+## Download
+
+Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest `QuotaGem-*.exe`. Run it directly — no installation needed.
+
+## For Developers
 
 ```powershell
-Set-Location 'D:\coding\projects\QuotaGem'
+git clone https://github.com/gyozalab/QuotaGem.git
+cd QuotaGem
 npm install
 npm run dev
 ```
