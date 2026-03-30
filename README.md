@@ -2,6 +2,9 @@
 
 繁體中文 | [English](./README.en.md)
 
+<img src="./docs/images/cover.png" alt="QuotaGem 封面圖" width="45%" />
+
+
 一個為 `Claude` 與 `Codex` 用量而生的 Windows 系統匣小工具。
 
 它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
