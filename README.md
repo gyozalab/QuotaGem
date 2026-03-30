@@ -43,7 +43,6 @@ The core Windows-first tray experience is working:
 ## Getting Started
 
 ```powershell
-Set-Location 'D:\coding\projects\tray-usage-widget'
 npm install
 npm run dev
 ```
@@ -51,7 +50,6 @@ npm run dev
 ## Verification
 
 ```powershell
-Set-Location 'D:\coding\projects\tray-usage-widget'
 npm test
 npm run build
 ```
@@ -83,6 +81,3 @@ Do not allow generated `.js` or `.d.ts` files to reappear inside `src/`.
 
 This project previously had stale compiled files in `src/` that caused old code to be loaded instead of the real `.ts` sources.
 
-## Handoff
-
-See `HANDOFF.md` for the latest implementation status, backlog, and known pitfalls.
