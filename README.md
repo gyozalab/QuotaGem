@@ -11,32 +11,39 @@
 - 重設時間
 - 警告與危險門檻
 
-![QuotaGem 展開面板](./docs/images/expanded-panel.png)
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
 ## 畫面預覽
 
 ### 精簡面板
 
-![QuotaGem 精簡面板](./docs/images/compact-panel.png)
+<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="66%" />
+
+### 單獨顯示 Claude 或 Codex
+
+<p>
+  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="49%" />
+  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="49%" />
+</p>
 
 ### 設定面板
 
-![QuotaGem 設定面板](./docs/images/settings-panel.png)
+<img src="./docs/images/settings-panel.png" alt="QuotaGem 設定面板" width="66%" />
 
 ### 淺色主題
 
-![QuotaGem 淺色展開面板](./docs/images/expanded-panel-white.png)
+<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="66%" />
 
 ### 系統匣圖示
 
-![QuotaGem tray icon](./docs/images/tray-icon-list.png)
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="66%" />
 
 ## 你可以期待什麼
 
 - 系統匣常駐，打開就看
 - `expanded` 與 `compact` 兩種面板
 - 同時查看 `Claude` 與 `Codex`
-- 也可以只看單一 provider
+- 也可以單獨只顯示 `Claude` 或 `Codex`
 - 自訂警告與危險門檻
 - 背景通知提醒
 - 可調整主題、透明度與縮放
@@ -72,5 +79,4 @@ npm run dev
 
 - 準備 Windows `.exe` 打包流程
 - 驗證安裝版的開機啟動與 tray 行為
-
-更多實作狀態與交接資訊可看 [`HANDOFF.md`](./HANDOFF.md)。
+- 依實際使用情境持續微調體驗

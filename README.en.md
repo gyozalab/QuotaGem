@@ -11,32 +11,39 @@ With QuotaGem, you can quickly check:
 - reset times
 - warning and danger thresholds
 
-![QuotaGem expanded panel](./docs/images/expanded-panel.png)
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
 
 ## Screenshots
 
 ### Compact panel
 
-![QuotaGem compact panel](./docs/images/compact-panel.png)
+<img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
+
+### Claude-only or Codex-only view
+
+<p>
+  <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
+  <img src="./docs/images/only-codex.png" alt="QuotaGem Codex-only view" width="49%" />
+</p>
 
 ### Settings panel
 
-![QuotaGem settings panel](./docs/images/settings-panel.png)
+<img src="./docs/images/settings-panel.png" alt="QuotaGem settings panel" width="66%" />
 
 ### Light theme
 
-![QuotaGem light expanded panel](./docs/images/expanded-panel-white.png)
+<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem light expanded panel" width="66%" />
 
 ### Tray icon
 
-![QuotaGem tray icon](./docs/images/tray-icon-list.png)
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="66%" />
 
 ## What It Offers
 
 - A calm tray-first experience
 - `expanded` and `compact` panels
 - Unified view for `Claude` and `Codex`
-- Single-provider view when you want less noise
+- A dedicated `Claude`-only or `Codex`-only view when you want less noise
 - Custom warning and danger thresholds
 - Background notifications
 - Theme, transparency, and scale controls
@@ -72,5 +79,4 @@ The core experience is already working:
 
 - prepare the Windows `.exe` packaging flow
 - verify launch-at-login and tray behavior in the packaged app
-
-For implementation details and handoff notes, see [`HANDOFF.md`](./HANDOFF.md).
+- keep refining the experience based on real usage
