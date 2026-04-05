@@ -10,6 +10,12 @@ import {
   extractClaudeUsage,
 } from "../providers/claude";
 import { extractLatestCodexUsage } from "../providers/codex";
+import {
+  extractGeminiUsage,
+  buildMonitoringFilter,
+  buildMonitoringInterval,
+  type GeminiMonitoringResponse,
+} from "../providers/gemini";
 import { loadProviderSnapshots } from "../providers";
 import type { DateFormatPreference, UsageDashboardState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
@@ -26,9 +32,11 @@ import { resolveClaudeDebugPath } from "./runtime-paths";
 export interface AppStoreShape {
   claudeSessionKey?: string;
   claudeOrganizationId?: string;
+  geminiProjectId?: string;
+  geminiDailyLimit?: number;
   preferredDisplayMode?: "expanded" | "compact";
   launchAtLogin?: boolean;
-  providerVisibility?: "both" | "claude" | "codex";
+  providerVisibility?: "both" | "all" | "claude" | "codex" | "gemini";
   refreshIntervalMinutes?: number;
   warningThreshold?: number;
   dangerThreshold?: number;
@@ -77,6 +85,11 @@ export async function buildDashboardState(
       provider: "codex",
       displayName: "Codex",
       read: readCodexSnapshot,
+    },
+    {
+      provider: "gemini",
+      displayName: "Gemini",
+      read: async () => readGeminiSnapshot(store),
     },
   ]);
 
@@ -164,6 +177,141 @@ async function walkDirectory(root: string): Promise<string[]> {
   );
 
   return nested.flat();
+}
+
+const GEMINI_OAUTH_PATH = path.join(os.homedir(), ".gemini", "oauth_creds.json");
+const GEMINI_DEFAULT_DAILY_LIMIT = 1500;
+
+interface GeminiOAuthFile {
+  client_id?: string;
+  client_secret?: string;
+  refresh_token?: string;
+}
+
+interface GeminiTokenResponse {
+  access_token?: string;
+  error?: string;
+}
+
+interface GeminiProjectListResponse {
+  projects?: Array<{ projectId?: string; name?: string; lifecycleState?: string }>;
+}
+
+async function readGeminiSnapshot(
+  store: Store<AppStoreShape>,
+): Promise<ProviderUsageSnapshot | null> {
+  let oauthJson: string;
+  try {
+    oauthJson = await fs.readFile(GEMINI_OAUTH_PATH, "utf8");
+  } catch {
+    return null;
+  }
+
+  let creds: GeminiOAuthFile;
+  try {
+    creds = JSON.parse(oauthJson) as GeminiOAuthFile;
+  } catch {
+    return null;
+  }
+
+  if (!creds.client_id || !creds.client_secret || !creds.refresh_token) {
+    return null;
+  }
+
+  const accessToken = await refreshGeminiToken(creds);
+  if (!accessToken) {
+    return null;
+  }
+
+  let projectId = store.get("geminiProjectId");
+  if (!projectId) {
+    projectId = await discoverGeminiProjectId(accessToken) ?? undefined;
+    if (projectId) {
+      store.set("geminiProjectId", projectId);
+    }
+  }
+
+  if (!projectId) {
+    return null;
+  }
+
+  const dailyLimit = store.get("geminiDailyLimit", GEMINI_DEFAULT_DAILY_LIMIT);
+  const interval = buildMonitoringInterval();
+  const filter = buildMonitoringFilter();
+
+  const monitoringUrl = new URL(
+    `https://monitoring.googleapis.com/v3/projects/${projectId}/timeSeries`,
+  );
+  monitoringUrl.searchParams.set("filter", filter);
+  monitoringUrl.searchParams.set("interval.startTime", interval.startTime);
+  monitoringUrl.searchParams.set("interval.endTime", interval.endTime);
+
+  try {
+    const response = await fetch(monitoringUrl.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as GeminiMonitoringResponse;
+    return extractGeminiUsage(data, {
+      dailyLimit,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function refreshGeminiToken(
+  creds: GeminiOAuthFile,
+): Promise<string | null> {
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: creds.client_id!,
+        client_secret: creds.client_secret!,
+        refresh_token: creds.refresh_token!,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as GeminiTokenResponse;
+    return data.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function discoverGeminiProjectId(
+  accessToken: string,
+): Promise<string | null> {
+  try {
+    const response = await fetch(
+      "https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE",
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as GeminiProjectListResponse;
+    const geminiProject = data.projects?.find(
+      (project) => project.projectId?.startsWith("gemini-cli-"),
+    );
+    return geminiProject?.projectId ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function readClaudeSnapshot(

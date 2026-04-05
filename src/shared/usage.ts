@@ -1,7 +1,7 @@
 import { t, type WidgetLanguage } from "./i18n";
 import type { DateFormatPreference } from "./dashboard";
 
-export type ProviderId = "claude" | "codex";
+export type ProviderId = "claude" | "codex" | "gemini";
 export type ProviderHealth = "available" | "stale" | "unavailable";
 
 export interface ProviderUsageSnapshot {
@@ -58,7 +58,10 @@ export function normalizeProviderUsage(
     displayName: snapshot.displayName,
     health: snapshot.health ?? "available",
     session: {
-      label: t(options.language, "session"),
+      label: t(
+        options.language,
+        snapshot.provider === "gemini" ? "daily" : "session",
+      ),
       percent: snapshot.sessionPercent,
       resetLabel: formatResetDisplay(
         snapshot.sessionResetAt,

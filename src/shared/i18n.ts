@@ -7,6 +7,7 @@ type TranslationKey =
   | "updatedAt"
   | "refreshing"
   | "session"
+  | "daily"
   | "weekly"
   | "resets"
   | "unavailable"
@@ -22,9 +23,11 @@ type TranslationKey =
   | "providerVisibility"
   | "expandedPanel"
   | "compactPanel"
+  | "allProviders"
   | "bothProviders"
   | "claudeOnly"
   | "codexOnly"
+  | "geminiOnly"
   | "refreshInterval"
   | "warningThreshold"
   | "dangerThreshold"
@@ -84,6 +87,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     updatedAt: "Updated {time}",
     refreshing: "Refreshing...",
     session: "Session",
+    daily: "Daily",
     weekly: "Weekly",
     resets: "Resets",
     unavailable: "Unavailable",
@@ -99,9 +103,11 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     providerVisibility: "Show providers",
     expandedPanel: "Expanded panel",
     compactPanel: "Compact panel",
+    allProviders: "All providers",
     bothProviders: "Claude + Codex",
     claudeOnly: "Claude only",
     codexOnly: "Codex only",
+    geminiOnly: "Gemini only",
     refreshInterval: "Refresh interval",
     warningThreshold: "Warning threshold",
     dangerThreshold: "Danger threshold",
@@ -162,6 +168,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     updatedAt: "更新於 {time}",
     refreshing: "重新整理中...",
     session: "每五小時",
+    daily: "每日",
     weekly: "每週",
     resets: "重設",
     unavailable: "無法取得",
@@ -177,9 +184,11 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     providerVisibility: "顯示項目",
     expandedPanel: "大面板",
     compactPanel: "小面板",
+    allProviders: "全部顯示",
     bothProviders: "Claude + Codex",
     claudeOnly: "只顯示 Claude",
     codexOnly: "只顯示 Codex",
+    geminiOnly: "只顯示 Gemini",
     refreshInterval: "更新頻率",
     warningThreshold: "警示門檻",
     dangerThreshold: "危險門檻",
