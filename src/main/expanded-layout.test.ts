@@ -15,10 +15,10 @@ describe("getExpandedWindowHeight", () => {
   it("caps the height when content would exceed the expanded panel maximum", () => {
     expect(
       getExpandedWindowHeight({
-        contentHeight: 640,
+        contentHeight: 800,
         settingsOpen: false,
       }),
-    ).toBe(500);
+    ).toBe(680);
   });
 
   it("keeps the full height while settings are open", () => {
@@ -27,6 +27,6 @@ describe("getExpandedWindowHeight", () => {
         contentHeight: 318,
         settingsOpen: true,
       }),
-    ).toBe(500);
+    ).toBe(680);
   });
 });

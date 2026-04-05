@@ -25,7 +25,7 @@ describe("getPanelSize", () => {
       }),
     ).toEqual({
       width: 354,
-      height: 150,
+      height: 187,
     });
   });
 });

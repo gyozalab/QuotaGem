@@ -1,7 +1,7 @@
 import { scalePanelDimension } from "../shared/panel-scale";
 
-const EXPANDED_BASE_SIZE = { width: 376, height: 500 };
-const COMPACT_BASE_SIZE = { width: 416, height: 176 };
+const EXPANDED_BASE_SIZE = { width: 376, height: 680 };
+const COMPACT_BASE_SIZE = { width: 416, height: 220 };
 
 export function getPanelSize({
   mode,
