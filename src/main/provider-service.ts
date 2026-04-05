@@ -183,9 +183,14 @@ const GEMINI_OAUTH_PATH = path.join(os.homedir(), ".gemini", "oauth_creds.json")
 const GEMINI_DEFAULT_DAILY_LIMIT = 1500;
 
 interface GeminiOAuthFile {
-  client_id?: string;
-  client_secret?: string;
+  access_token?: string;
   refresh_token?: string;
+  expiry_date?: number;
+}
+
+interface GeminiCliOAuthConstants {
+  clientId: string;
+  clientSecret: string;
 }
 
 interface GeminiTokenResponse {
@@ -214,11 +219,11 @@ async function readGeminiSnapshot(
     return null;
   }
 
-  if (!creds.client_id || !creds.client_secret || !creds.refresh_token) {
+  if (!creds.refresh_token) {
     return null;
   }
 
-  const accessToken = await refreshGeminiToken(creds);
+  const accessToken = await resolveGeminiAccessToken(creds);
   if (!accessToken) {
     return null;
   }
@@ -265,16 +270,25 @@ async function readGeminiSnapshot(
   }
 }
 
-async function refreshGeminiToken(
+async function resolveGeminiAccessToken(
   creds: GeminiOAuthFile,
 ): Promise<string | null> {
+  if (creds.access_token && creds.expiry_date && creds.expiry_date > Date.now()) {
+    return creds.access_token;
+  }
+
+  const oauthConstants = await extractGeminiCliOAuthConstants();
+  if (!oauthConstants) {
+    return null;
+  }
+
   try {
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: creds.client_id!,
-        client_secret: creds.client_secret!,
+        client_id: oauthConstants.clientId,
+        client_secret: oauthConstants.clientSecret,
         refresh_token: creds.refresh_token!,
         grant_type: "refresh_token",
       }),
@@ -312,6 +326,50 @@ async function discoverGeminiProjectId(
   } catch {
     return null;
   }
+}
+
+let cachedGeminiOAuthConstants: GeminiCliOAuthConstants | null = null;
+
+async function extractGeminiCliOAuthConstants(): Promise<GeminiCliOAuthConstants | null> {
+  if (cachedGeminiOAuthConstants) {
+    return cachedGeminiOAuthConstants;
+  }
+
+  const searchRoots = [
+    path.join(os.homedir(), "AppData", "Roaming", "npm", "node_modules", "@google", "gemini-cli", "bundle"),
+    path.join(os.homedir(), ".npm-global", "lib", "node_modules", "@google", "gemini-cli", "bundle"),
+    "/usr/local/lib/node_modules/@google/gemini-cli/bundle",
+    "/usr/lib/node_modules/@google/gemini-cli/bundle",
+  ];
+
+  for (const root of searchRoots) {
+    try {
+      const entries = await fs.readdir(root);
+      const chunks = entries.filter((name) => name.startsWith("chunk-") && name.endsWith(".js"));
+
+      for (const chunk of chunks) {
+        const content = await fs.readFile(path.join(root, chunk), "utf8");
+        const idMatch = content.match(
+          /OAUTH_CLIENT_ID\s*=\s*"([^"]+\.apps\.googleusercontent\.com)"/,
+        );
+        const secretMatch = content.match(
+          /OAUTH_CLIENT_SECRET\s*=\s*"(GOCSPX-[^"]+)"/,
+        );
+
+        if (idMatch?.[1] && secretMatch?.[1]) {
+          cachedGeminiOAuthConstants = {
+            clientId: idMatch[1],
+            clientSecret: secretMatch[1],
+          };
+          return cachedGeminiOAuthConstants;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
 }
 
 async function readClaudeSnapshot(
