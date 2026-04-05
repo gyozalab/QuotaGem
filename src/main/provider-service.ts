@@ -10,12 +10,7 @@ import {
   extractClaudeUsage,
 } from "../providers/claude";
 import { extractLatestCodexUsage } from "../providers/codex";
-import {
-  extractGeminiUsage,
-  buildMonitoringFilter,
-  buildMonitoringInterval,
-  type GeminiMonitoringResponse,
-} from "../providers/gemini";
+import { extractGeminiLocalUsage } from "../providers/gemini";
 import { loadProviderSnapshots } from "../providers";
 import type { DateFormatPreference, UsageDashboardState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
@@ -32,7 +27,6 @@ import { resolveClaudeDebugPath } from "./runtime-paths";
 export interface AppStoreShape {
   claudeSessionKey?: string;
   claudeOrganizationId?: string;
-  geminiProjectId?: string;
   geminiDailyLimit?: number;
   preferredDisplayMode?: "expanded" | "compact";
   launchAtLogin?: boolean;
@@ -179,189 +173,61 @@ async function walkDirectory(root: string): Promise<string[]> {
   return nested.flat();
 }
 
-const GEMINI_OAUTH_PATH = path.join(os.homedir(), ".gemini", "oauth_creds.json");
-const GEMINI_DEFAULT_DAILY_LIMIT = 1500;
+const GEMINI_TMP_ROOT = path.join(os.homedir(), ".gemini", "tmp");
+const GEMINI_DEFAULT_DAILY_LIMIT = 1000;
 
-interface GeminiOAuthFile {
-  access_token?: string;
-  refresh_token?: string;
-  expiry_date?: number;
-}
-
-interface GeminiCliOAuthConstants {
-  clientId: string;
-  clientSecret: string;
-}
-
-interface GeminiTokenResponse {
-  access_token?: string;
-  error?: string;
-}
-
-interface GeminiProjectListResponse {
-  projects?: Array<{ projectId?: string; name?: string; lifecycleState?: string }>;
+interface GeminiSessionFile {
+  startTime?: string;
+  messages?: Array<{
+    type?: string;
+    tokens?: { total?: number };
+  }>;
 }
 
 async function readGeminiSnapshot(
   store: Store<AppStoreShape>,
 ): Promise<ProviderUsageSnapshot | null> {
-  let oauthJson: string;
-  try {
-    oauthJson = await fs.readFile(GEMINI_OAUTH_PATH, "utf8");
-  } catch {
+  const sessionFiles = await findGeminiSessionFiles();
+
+  if (sessionFiles.length === 0) {
     return null;
   }
 
-  let creds: GeminiOAuthFile;
-  try {
-    creds = JSON.parse(oauthJson) as GeminiOAuthFile;
-  } catch {
-    return null;
-  }
-
-  if (!creds.refresh_token) {
-    return null;
-  }
-
-  const accessToken = await resolveGeminiAccessToken(creds);
-  if (!accessToken) {
-    return null;
-  }
-
-  let projectId = store.get("geminiProjectId");
-  if (!projectId) {
-    projectId = await discoverGeminiProjectId(accessToken) ?? undefined;
-    if (projectId) {
-      store.set("geminiProjectId", projectId);
+  const sessions: GeminiSessionFile[] = [];
+  for (const file of sessionFiles) {
+    try {
+      const content = await fs.readFile(file, "utf8");
+      sessions.push(JSON.parse(content) as GeminiSessionFile);
+    } catch {
+      continue;
     }
-  }
-
-  if (!projectId) {
-    return null;
   }
 
   const dailyLimit = store.get("geminiDailyLimit", GEMINI_DEFAULT_DAILY_LIMIT);
-  const interval = buildMonitoringInterval();
-  const filter = buildMonitoringFilter();
-
-  const monitoringUrl = new URL(
-    `https://monitoring.googleapis.com/v3/projects/${projectId}/timeSeries`,
-  );
-  monitoringUrl.searchParams.set("filter", filter);
-  monitoringUrl.searchParams.set("interval.startTime", interval.startTime);
-  monitoringUrl.searchParams.set("interval.endTime", interval.endTime);
-
-  try {
-    const response = await fetch(monitoringUrl.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as GeminiMonitoringResponse;
-    return extractGeminiUsage(data, {
-      dailyLimit,
-      lastUpdated: new Date().toISOString(),
-    });
-  } catch {
-    return null;
-  }
+  return extractGeminiLocalUsage(sessions, {
+    dailyLimit,
+    lastUpdated: new Date().toISOString(),
+  });
 }
 
-async function resolveGeminiAccessToken(
-  creds: GeminiOAuthFile,
-): Promise<string | null> {
-  if (creds.access_token && creds.expiry_date && creds.expiry_date > Date.now()) {
-    return creds.access_token;
-  }
-
-  const oauthConstants = await extractGeminiCliOAuthConstants();
-  if (!oauthConstants) {
-    return null;
-  }
-
+async function findGeminiSessionFiles(): Promise<string[]> {
+  let projectDirs: string[];
   try {
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: oauthConstants.clientId,
-        client_secret: oauthConstants.clientSecret,
-        refresh_token: creds.refresh_token!,
-        grant_type: "refresh_token",
-      }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as GeminiTokenResponse;
-    return data.access_token ?? null;
+    const entries = await fs.readdir(GEMINI_TMP_ROOT, { withFileTypes: true });
+    projectDirs = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(GEMINI_TMP_ROOT, entry.name, "chats"));
   } catch {
-    return null;
-  }
-}
-
-async function discoverGeminiProjectId(
-  accessToken: string,
-): Promise<string | null> {
-  try {
-    const response = await fetch(
-      "https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE",
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as GeminiProjectListResponse;
-    const geminiProject = data.projects?.find(
-      (project) => project.projectId?.startsWith("gemini-cli-"),
-    );
-    return geminiProject?.projectId ?? null;
-  } catch {
-    return null;
-  }
-}
-
-let cachedGeminiOAuthConstants: GeminiCliOAuthConstants | null = null;
-
-async function extractGeminiCliOAuthConstants(): Promise<GeminiCliOAuthConstants | null> {
-  if (cachedGeminiOAuthConstants) {
-    return cachedGeminiOAuthConstants;
+    return [];
   }
 
-  const searchRoots = [
-    path.join(os.homedir(), "AppData", "Roaming", "npm", "node_modules", "@google", "gemini-cli", "bundle"),
-    path.join(os.homedir(), ".npm-global", "lib", "node_modules", "@google", "gemini-cli", "bundle"),
-    "/usr/local/lib/node_modules/@google/gemini-cli/bundle",
-    "/usr/lib/node_modules/@google/gemini-cli/bundle",
-  ];
-
-  for (const root of searchRoots) {
+  const allFiles: string[] = [];
+  for (const chatsDir of projectDirs) {
     try {
-      const entries = await fs.readdir(root);
-      const chunks = entries.filter((name) => name.startsWith("chunk-") && name.endsWith(".js"));
-
-      for (const chunk of chunks) {
-        const content = await fs.readFile(path.join(root, chunk), "utf8");
-        const idMatch = content.match(
-          /OAUTH_CLIENT_ID\s*=\s*"([^"]+\.apps\.googleusercontent\.com)"/,
-        );
-        const secretMatch = content.match(
-          /OAUTH_CLIENT_SECRET\s*=\s*"(GOCSPX-[^"]+)"/,
-        );
-
-        if (idMatch?.[1] && secretMatch?.[1]) {
-          cachedGeminiOAuthConstants = {
-            clientId: idMatch[1],
-            clientSecret: secretMatch[1],
-          };
-          return cachedGeminiOAuthConstants;
+      const files = await fs.readdir(chatsDir);
+      for (const file of files) {
+        if (file.startsWith("session-") && file.endsWith(".json")) {
+          allFiles.push(path.join(chatsDir, file));
         }
       }
     } catch {
@@ -369,7 +235,7 @@ async function extractGeminiCliOAuthConstants(): Promise<GeminiCliOAuthConstants
     }
   }
 
-  return null;
+  return allFiles;
 }
 
 async function readClaudeSnapshot(

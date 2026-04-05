@@ -1,164 +1,122 @@
-describe("extractGeminiUsage", () => {
-  it("calculates daily usage percentage from monitoring response", async () => {
+describe("extractGeminiLocalUsage", () => {
+  it("calculates daily usage from session files with startTime after midnight PT", async () => {
     const geminiModule = await import("./gemini");
-    const extractGeminiUsage = Reflect.get(geminiModule, "extractGeminiUsage");
-
-    expect(typeof extractGeminiUsage).toBe("function");
-
-    if (typeof extractGeminiUsage !== "function") {
-      return;
-    }
-
-    const response = {
-      timeSeries: [
-        {
-          metric: { type: "serviceruntime.googleapis.com/api/request_count" },
-          points: [
-            {
-              interval: {
-                startTime: "2026-04-06T07:00:00Z",
-                endTime: "2026-04-06T08:00:00Z",
-              },
-              value: { int64Value: "450" },
-            },
-            {
-              interval: {
-                startTime: "2026-04-06T08:00:00Z",
-                endTime: "2026-04-06T09:00:00Z",
-              },
-              value: { int64Value: "300" },
-            },
-          ],
-        },
-      ],
-    };
-
-    const snapshot = extractGeminiUsage(response, {
-      dailyLimit: 1500,
-      lastUpdated: "2026-04-06T09:00:00.000Z",
-    });
-
-    expect(snapshot).toEqual({
-      provider: "gemini",
-      displayName: "Gemini",
-      sessionPercent: 50,
-      sessionResetAt: expect.any(String),
-      weeklyPercent: 0,
-      weeklyResetAt: null,
-      lastUpdated: "2026-04-06T09:00:00.000Z",
-      health: "available",
-    });
-  });
-
-  it("returns 0% when monitoring response has no time series", async () => {
-    const geminiModule = await import("./gemini");
-    const extractGeminiUsage = Reflect.get(geminiModule, "extractGeminiUsage");
-
-    expect(typeof extractGeminiUsage).toBe("function");
-
-    if (typeof extractGeminiUsage !== "function") {
-      return;
-    }
-
-    const snapshot = extractGeminiUsage(
-      { timeSeries: [] },
-      {
-        dailyLimit: 1500,
-        lastUpdated: "2026-04-06T09:00:00.000Z",
-      },
+    const extractGeminiLocalUsage = Reflect.get(
+      geminiModule,
+      "extractGeminiLocalUsage",
     );
 
-    expect(snapshot).toEqual({
-      provider: "gemini",
-      displayName: "Gemini",
-      sessionPercent: 0,
-      sessionResetAt: expect.any(String),
-      weeklyPercent: 0,
-      weeklyResetAt: null,
-      lastUpdated: "2026-04-06T09:00:00.000Z",
-      health: "available",
-    });
-  });
+    expect(typeof extractGeminiLocalUsage).toBe("function");
 
-  it("caps usage at 100% when requests exceed daily limit", async () => {
-    const geminiModule = await import("./gemini");
-    const extractGeminiUsage = Reflect.get(geminiModule, "extractGeminiUsage");
-
-    expect(typeof extractGeminiUsage).toBe("function");
-
-    if (typeof extractGeminiUsage !== "function") {
+    if (typeof extractGeminiLocalUsage !== "function") {
       return;
     }
 
-    const response = {
-      timeSeries: [
-        {
-          points: [
-            { value: { int64Value: "2000" } },
-          ],
-        },
-      ],
-    };
+    const now = new Date();
+    const recentTime = new Date(now.getTime() - 60_000).toISOString();
+    const oldTime = "2020-01-01T00:00:00.000Z";
 
-    const snapshot = extractGeminiUsage(response, {
-      dailyLimit: 1500,
+    const sessions = [
+      { startTime: recentTime, messages: [] },
+      { startTime: recentTime, messages: [] },
+      { startTime: oldTime, messages: [] },
+    ];
+
+    const snapshot = extractGeminiLocalUsage(sessions, {
+      dailyLimit: 1000,
+      lastUpdated: "2026-04-06T09:00:00.000Z",
+    });
+
+    expect(snapshot.provider).toBe("gemini");
+    expect(snapshot.displayName).toBe("Gemini");
+    expect(snapshot.sessionPercent).toBe(0.2);
+    expect(snapshot.weeklyPercent).toBe(0);
+    expect(snapshot.weeklyResetAt).toBeNull();
+    expect(snapshot.health).toBe("available");
+  });
+
+  it("returns 0% when no sessions exist", async () => {
+    const geminiModule = await import("./gemini");
+    const extractGeminiLocalUsage = Reflect.get(
+      geminiModule,
+      "extractGeminiLocalUsage",
+    );
+
+    expect(typeof extractGeminiLocalUsage).toBe("function");
+
+    if (typeof extractGeminiLocalUsage !== "function") {
+      return;
+    }
+
+    const snapshot = extractGeminiLocalUsage([], {
+      dailyLimit: 1000,
+      lastUpdated: "2026-04-06T09:00:00.000Z",
+    });
+
+    expect(snapshot.sessionPercent).toBe(0);
+    expect(snapshot.health).toBe("available");
+  });
+
+  it("caps usage at 100% when sessions exceed daily limit", async () => {
+    const geminiModule = await import("./gemini");
+    const extractGeminiLocalUsage = Reflect.get(
+      geminiModule,
+      "extractGeminiLocalUsage",
+    );
+
+    expect(typeof extractGeminiLocalUsage).toBe("function");
+
+    if (typeof extractGeminiLocalUsage !== "function") {
+      return;
+    }
+
+    const now = new Date();
+    const recentTime = new Date(now.getTime() - 60_000).toISOString();
+    const sessions = Array.from({ length: 50 }, () => ({
+      startTime: recentTime,
+      messages: [],
+    }));
+
+    const snapshot = extractGeminiLocalUsage(sessions, {
+      dailyLimit: 20,
       lastUpdated: "2026-04-06T09:00:00.000Z",
     });
 
     expect(snapshot.sessionPercent).toBe(100);
   });
 
-  it("handles doubleValue format in monitoring points", async () => {
+  it("excludes sessions without startTime", async () => {
     const geminiModule = await import("./gemini");
-    const extractGeminiUsage = Reflect.get(geminiModule, "extractGeminiUsage");
+    const extractGeminiLocalUsage = Reflect.get(
+      geminiModule,
+      "extractGeminiLocalUsage",
+    );
 
-    expect(typeof extractGeminiUsage).toBe("function");
+    expect(typeof extractGeminiLocalUsage).toBe("function");
 
-    if (typeof extractGeminiUsage !== "function") {
+    if (typeof extractGeminiLocalUsage !== "function") {
       return;
     }
 
-    const response = {
-      timeSeries: [
-        {
-          points: [
-            { value: { doubleValue: 375.0 } },
-          ],
-        },
-      ],
-    };
+    const now = new Date();
+    const recentTime = new Date(now.getTime() - 60_000).toISOString();
+    const sessions = [
+      { startTime: recentTime, messages: [] },
+      { messages: [] },
+      { startTime: undefined, messages: [] },
+    ];
 
-    const snapshot = extractGeminiUsage(response, {
-      dailyLimit: 1500,
+    const snapshot = extractGeminiLocalUsage(sessions, {
+      dailyLimit: 1000,
       lastUpdated: "2026-04-06T09:00:00.000Z",
     });
 
-    expect(snapshot.sessionPercent).toBe(25);
-  });
-});
-
-describe("buildMonitoringFilter", () => {
-  it("returns a filter targeting the generativelanguage service", async () => {
-    const geminiModule = await import("./gemini");
-    const buildMonitoringFilter = Reflect.get(
-      geminiModule,
-      "buildMonitoringFilter",
-    );
-
-    expect(typeof buildMonitoringFilter).toBe("function");
-
-    if (typeof buildMonitoringFilter !== "function") {
-      return;
-    }
-
-    const filter = buildMonitoringFilter();
-    expect(filter).toContain("serviceruntime.googleapis.com/api/request_count");
-    expect(filter).toContain("generativelanguage.googleapis.com");
+    expect(snapshot.sessionPercent).toBe(0.1);
   });
 });
 
 describe("nextMidnightPT", () => {
-  it("returns a valid ISO date string", async () => {
+  it("returns a valid ISO date string in the future", async () => {
     const geminiModule = await import("./gemini");
     const nextMidnightPT = Reflect.get(geminiModule, "nextMidnightPT");
 
@@ -171,5 +129,22 @@ describe("nextMidnightPT", () => {
     const result = nextMidnightPT();
     expect(typeof result).toBe("string");
     expect(new Date(result).getTime()).toBeGreaterThan(Date.now());
+  });
+});
+
+describe("todayMidnightPTUtc", () => {
+  it("returns a Date in the past", async () => {
+    const geminiModule = await import("./gemini");
+    const todayMidnightPTUtc = Reflect.get(geminiModule, "todayMidnightPTUtc");
+
+    expect(typeof todayMidnightPTUtc).toBe("function");
+
+    if (typeof todayMidnightPTUtc !== "function") {
+      return;
+    }
+
+    const result = todayMidnightPTUtc();
+    expect(result).toBeInstanceOf(Date);
+    expect(result.getTime()).toBeLessThanOrEqual(Date.now());
   });
 });
