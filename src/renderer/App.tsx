@@ -335,9 +335,10 @@ function App() {
                   }));
                 }}
               >
-                <option value="both">{t(language, "bothProviders")}</option>
+                <option value="both">{t(language, "allProviders")}</option>
                 <option value="claude">{t(language, "claudeOnly")}</option>
                 <option value="codex">{t(language, "codexOnly")}</option>
+                <option value="gemini">{t(language, "geminiOnly")}</option>
               </select>
             </label>
             <label className="settings-field">

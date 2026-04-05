@@ -25,6 +25,7 @@
   --panel-notice-rgb: 180, 78, 78;
   --panel-claude-rgb: 217, 119, 87;
   --panel-codex-rgb: 142, 152, 220;
+  --panel-gemini-rgb: 66, 133, 244;
   --panel-opacity-high: 0.9;
   --panel-opacity-mid: 0.86;
   --panel-control-alpha: 0.92;
@@ -219,6 +220,10 @@ select {
 
 .provider-icon--codex {
   color: rgba(var(--panel-codex-rgb), 0.9);
+}
+
+.provider-icon--gemini {
+  color: rgba(var(--panel-gemini-rgb), 0.95);
 }
 
 .provider-pill {

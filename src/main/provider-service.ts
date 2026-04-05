@@ -10,6 +10,7 @@ import {
   extractClaudeUsage,
 } from "../providers/claude";
 import { extractLatestCodexUsage } from "../providers/codex";
+import { extractGeminiLocalUsage } from "../providers/gemini";
 import { loadProviderSnapshots } from "../providers";
 import type { DateFormatPreference, UsageDashboardState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
@@ -26,9 +27,10 @@ import { resolveClaudeDebugPath } from "./runtime-paths";
 export interface AppStoreShape {
   claudeSessionKey?: string;
   claudeOrganizationId?: string;
+  geminiDailyLimit?: number;
   preferredDisplayMode?: "expanded" | "compact";
   launchAtLogin?: boolean;
-  providerVisibility?: "both" | "claude" | "codex";
+  providerVisibility?: "both" | "all" | "claude" | "codex" | "gemini";
   refreshIntervalMinutes?: number;
   warningThreshold?: number;
   dangerThreshold?: number;
@@ -77,6 +79,11 @@ export async function buildDashboardState(
       provider: "codex",
       displayName: "Codex",
       read: readCodexSnapshot,
+    },
+    {
+      provider: "gemini",
+      displayName: "Gemini",
+      read: async () => readGeminiSnapshot(store),
     },
   ]);
 
@@ -164,6 +171,71 @@ async function walkDirectory(root: string): Promise<string[]> {
   );
 
   return nested.flat();
+}
+
+const GEMINI_TMP_ROOT = path.join(os.homedir(), ".gemini", "tmp");
+const GEMINI_DEFAULT_DAILY_LIMIT = 1500;
+
+interface GeminiSessionFile {
+  startTime?: string;
+  messages?: Array<{
+    type?: string;
+    tokens?: { total?: number };
+  }>;
+}
+
+async function readGeminiSnapshot(
+  store: Store<AppStoreShape>,
+): Promise<ProviderUsageSnapshot | null> {
+  const sessionFiles = await findGeminiSessionFiles();
+
+  if (sessionFiles.length === 0) {
+    return null;
+  }
+
+  const sessions: GeminiSessionFile[] = [];
+  for (const file of sessionFiles) {
+    try {
+      const content = await fs.readFile(file, "utf8");
+      sessions.push(JSON.parse(content) as GeminiSessionFile);
+    } catch {
+      continue;
+    }
+  }
+
+  const dailyLimit = store.get("geminiDailyLimit", GEMINI_DEFAULT_DAILY_LIMIT);
+  return extractGeminiLocalUsage(sessions, {
+    dailyLimit,
+    lastUpdated: new Date().toISOString(),
+  });
+}
+
+async function findGeminiSessionFiles(): Promise<string[]> {
+  let projectDirs: string[];
+  try {
+    const entries = await fs.readdir(GEMINI_TMP_ROOT, { withFileTypes: true });
+    projectDirs = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(GEMINI_TMP_ROOT, entry.name, "chats"));
+  } catch {
+    return [];
+  }
+
+  const allFiles: string[] = [];
+  for (const chatsDir of projectDirs) {
+    try {
+      const files = await fs.readdir(chatsDir);
+      for (const file of files) {
+        if (file.startsWith("session-") && file.endsWith(".json")) {
+          allFiles.push(path.join(chatsDir, file));
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return allFiles;
 }
 
 async function readClaudeSnapshot(

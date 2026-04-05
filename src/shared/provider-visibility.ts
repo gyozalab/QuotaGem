@@ -5,7 +5,7 @@ export function filterProvidersByVisibility(
   providers: NormalizedProviderUsage[],
   visibility: ProviderVisibility,
 ): NormalizedProviderUsage[] {
-  if (visibility === "both") {
+  if (visibility === "both" || visibility === "all") {
     return providers;
   }
 

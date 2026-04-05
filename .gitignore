@@ -3,3 +3,4 @@ dist/
 dist-electron/
 *.tsbuildinfo
 claude-debug.json
+release/
