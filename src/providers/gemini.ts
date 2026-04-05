@@ -25,9 +25,14 @@ export function extractGeminiLocalUsage(
     return new Date(session.startTime).getTime() >= todayStart.getTime();
   });
 
-  const sessionCount = todaySessions.length;
+  const modelRequests = todaySessions.reduce(
+    (sum, session) =>
+      sum +
+      (session.messages ?? []).filter((m) => m.type === "gemini").length,
+    0,
+  );
   const percent = options.dailyLimit > 0
-    ? Math.min((sessionCount / options.dailyLimit) * 100, 100)
+    ? Math.min((modelRequests / options.dailyLimit) * 100, 100)
     : 0;
 
   return {

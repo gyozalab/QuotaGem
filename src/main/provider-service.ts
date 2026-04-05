@@ -174,7 +174,7 @@ async function walkDirectory(root: string): Promise<string[]> {
 }
 
 const GEMINI_TMP_ROOT = path.join(os.homedir(), ".gemini", "tmp");
-const GEMINI_DEFAULT_DAILY_LIMIT = 1000;
+const GEMINI_DEFAULT_DAILY_LIMIT = 1500;
 
 interface GeminiSessionFile {
   startTime?: string;

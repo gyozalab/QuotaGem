@@ -17,13 +17,23 @@ describe("extractGeminiLocalUsage", () => {
     const oldTime = "2020-01-01T00:00:00.000Z";
 
     const sessions = [
-      { startTime: recentTime, messages: [] },
-      { startTime: recentTime, messages: [] },
-      { startTime: oldTime, messages: [] },
+      {
+        startTime: recentTime,
+        messages: [
+          { type: "user" },
+          { type: "gemini", tokens: { total: 100 } },
+          { type: "gemini", tokens: { total: 200 } },
+        ],
+      },
+      {
+        startTime: recentTime,
+        messages: [{ type: "user" }, { type: "gemini", tokens: { total: 50 } }],
+      },
+      { startTime: oldTime, messages: [{ type: "gemini", tokens: { total: 999 } }] },
     ];
 
     const snapshot = extractGeminiLocalUsage(sessions, {
-      dailyLimit: 1000,
+      dailyLimit: 1500,
       lastUpdated: "2026-04-06T09:00:00.000Z",
     });
 
@@ -49,7 +59,7 @@ describe("extractGeminiLocalUsage", () => {
     }
 
     const snapshot = extractGeminiLocalUsage([], {
-      dailyLimit: 1000,
+      dailyLimit: 1500,
       lastUpdated: "2026-04-06T09:00:00.000Z",
     });
 
@@ -72,9 +82,12 @@ describe("extractGeminiLocalUsage", () => {
 
     const now = new Date();
     const recentTime = new Date(now.getTime() - 60_000).toISOString();
-    const sessions = Array.from({ length: 50 }, () => ({
+    const sessions = Array.from({ length: 5 }, () => ({
       startTime: recentTime,
-      messages: [],
+      messages: Array.from({ length: 10 }, () => ({
+        type: "gemini" as const,
+        tokens: { total: 100 },
+      })),
     }));
 
     const snapshot = extractGeminiLocalUsage(sessions, {
@@ -101,9 +114,16 @@ describe("extractGeminiLocalUsage", () => {
     const now = new Date();
     const recentTime = new Date(now.getTime() - 60_000).toISOString();
     const sessions = [
-      { startTime: recentTime, messages: [] },
-      { messages: [] },
-      { startTime: undefined, messages: [] },
+      {
+        startTime: recentTime,
+        messages: [
+          { type: "user" },
+          { type: "gemini", tokens: { total: 100 } },
+          { type: "gemini", tokens: { total: 200 } },
+        ],
+      },
+      { messages: [{ type: "gemini", tokens: { total: 50 } }] },
+      { startTime: undefined, messages: [{ type: "gemini", tokens: { total: 50 } }] },
     ];
 
     const snapshot = extractGeminiLocalUsage(sessions, {
@@ -111,7 +131,7 @@ describe("extractGeminiLocalUsage", () => {
       lastUpdated: "2026-04-06T09:00:00.000Z",
     });
 
-    expect(snapshot.sessionPercent).toBe(0.1);
+    expect(snapshot.sessionPercent).toBe(0.2);
   });
 });
 
