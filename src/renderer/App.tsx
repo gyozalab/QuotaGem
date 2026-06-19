@@ -15,10 +15,12 @@ import {
 } from "../shared/panel-themes";
 import { filterProvidersByVisibility } from "../shared/provider-visibility";
 import { type NormalizedProviderUsage } from "../shared/usage";
+import { LoginPage } from "./LoginPage";
 import { UsagePanel } from "./UsagePanel";
 import "./styles.css";
 
 type SurfaceMode = "expanded" | "compact";
+type AppView = "dashboard" | "login";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -48,7 +50,16 @@ function getSurfaceMode(): SurfaceMode {
   return params.get("mode") === "compact" ? "compact" : "expanded";
 }
 
+function getAppView(): AppView {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("view") === "login" ? "login" : "dashboard";
+}
+
 function App() {
+  return getAppView() === "login" ? <LoginPage /> : <UsageDashboardApp />;
+}
+
+function UsageDashboardApp() {
   const [dashboardState, setDashboardState] = useState<UsageDashboardState>({
     providers: DEFAULT_PROVIDERS,
     lastUpdatedLabel: "Waiting for provider data",
@@ -62,7 +73,7 @@ function App() {
       notificationsEnabled: true,
       notificationLevel: "all",
       language: "en",
-      timeDisplay: "utc",
+      timeDisplay: "taipei",
       timeFormat: "24h",
       dateFormat: "iso",
       panelScale: 100,
@@ -394,22 +405,7 @@ function App() {
                 }}
               />
             </label>
-            <label className="settings-field">
-              <span>{t(language, "resetTimeTimezone")}</span>
-              <select
-                value={draftPreferences.timeDisplay}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    timeDisplay: event.target.value as "utc" | "local",
-                  }));
-                }}
-              >
-                <option value="utc">UTC</option>
-                <option value="local">{t(language, "localTime")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
+<label className="settings-field">
               <span>{t(language, "timeDisplayFormat")}</span>
               <select
                 value={draftPreferences.timeFormat}

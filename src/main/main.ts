@@ -163,11 +163,16 @@ function createTray() {
     userDataPath: app.getPath("userData"),
   });
   const image = nativeImage.createFromPath(iconPath).resize({ width: 20, height: 20 });
+  image.setTemplateImage(true);
   const language = store.get("language", "en");
 
   tray = new Tray(image);
   tray.setToolTip(t(language, "trayUsageWidget"));
+  let lastTrayClick = 0;
   tray.on("click", () => {
+    const now = Date.now();
+    if (now - lastTrayClick < 300) return;
+    lastTrayClick = now;
     togglePreferredWindow();
   });
   tray.on("right-click", () => {
@@ -430,14 +435,24 @@ function positionWindow(
     expandedWindowHeight,
   });
 
+  const wasResizable = window.isResizable();
+  if (!wasResizable) {
+    window.setResizable(true);
+  }
+
   window.setBounds({
     width: size.width,
     height: size.height,
     x: workArea.x + workArea.width - size.width - WINDOW_MARGIN,
     y: workArea.y + workArea.height - size.height - WINDOW_MARGIN,
   });
+
+  if (!wasResizable) {
+    window.setResizable(false);
+  }
 }
 
+app.commandLine.appendSwitch("disable-gpu");
 app.whenReady().then(() => {
   primeClaudeSession();
   syncLaunchAtLoginPreference(

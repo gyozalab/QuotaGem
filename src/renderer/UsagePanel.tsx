@@ -31,13 +31,26 @@ export function UsagePanel({
   onClose,
 }: UsagePanelProps) {
   if (mode === "compact") {
+    const colClass =
+      providers.length >= 3
+        ? " compact-widget__columns--triple"
+        : providers.length === 1
+          ? " compact-widget__columns--single"
+          : "";
+
     return (
       <main className="compact-shell">
         <section className="compact-widget">
           <div className="compact-widget__toolbar drag-region">
-            <span className="compact-widget__meta">
-              {loading ? t(language, "refreshing") : lastUpdatedLabel}
-            </span>
+            <div className="compact-widget__identity">
+              <span className="compact-widget__brand">
+                <UsageMark className="compact-widget__mark" />
+                <span>QuotaGem</span>
+              </span>
+              <span className="compact-widget__meta" aria-live="polite">
+                {loading ? t(language, "refreshing") : lastUpdatedLabel}
+              </span>
+            </div>
             <div className="compact-widget__toolbar-actions no-drag">
               <button
                 className="icon-button icon-button--icon no-drag"
@@ -64,15 +77,11 @@ export function UsagePanel({
             </div>
           </div>
           <div className="compact-widget__content no-drag">
-            <div
-              className={`compact-widget__columns${
-                providers.length === 1 ? " compact-widget__columns--single" : ""
-              }`}
-            >
+            <div className={`compact-widget__columns${colClass}`}>
               {providers.map((provider) => (
                 <article
                   key={provider.provider}
-                  className={`compact-provider compact-provider--${provider.health}`}
+                  className={`compact-provider compact-provider--${provider.provider} compact-provider--${provider.health}`}
                 >
                   <div className="compact-provider__header">
                     <span className="compact-provider__title">
@@ -86,13 +95,33 @@ export function UsagePanel({
                     </span>
                   </div>
                   <CompactMetric
+                    language={language}
                     label={provider.session.label}
                     percent={provider.session.percent}
+                    resetLabel={provider.session.resetLabel}
                   />
                   <CompactMetric
+                    language={language}
                     label={provider.weekly.label}
                     percent={provider.weekly.percent}
+                    resetLabel={provider.weekly.resetLabel}
                   />
+                  {provider.thirdPartySession && (
+                    <CompactMetric
+                      language={language}
+                      label={provider.thirdPartySession.label}
+                      percent={provider.thirdPartySession.percent}
+                      resetLabel={provider.thirdPartySession.resetLabel}
+                    />
+                  )}
+                  {provider.thirdPartyWeekly && (
+                    <CompactMetric
+                      language={language}
+                      label={provider.thirdPartyWeekly.label}
+                      percent={provider.thirdPartyWeekly.percent}
+                      resetLabel={provider.thirdPartyWeekly.resetLabel}
+                    />
+                  )}
                 </article>
               ))}
             </div>
@@ -106,11 +135,14 @@ export function UsagePanel({
     <main className="app-shell">
       <section ref={panelRef} className="glass-panel expanded-panel">
         <header className="panel-header drag-region">
-          <div className="panel-header__meta-group">
-            <span className="header-meta">
+          <div className="panel-header__identity">
+            <span className="panel-header__brand">
+              <UsageMark className="panel-header__mark" />
+              <span>QuotaGem</span>
+            </span>
+            <span className="header-meta" aria-live="polite">
               {loading ? t(language, "refreshing") : lastUpdatedLabel}
             </span>
-            <UsageMark className="panel-header__mark" />
           </div>
           <div className="panel-header__actions no-drag">
             <button
@@ -164,18 +196,19 @@ export function UsagePanel({
           {providers.map((provider) => (
             <article
               key={provider.provider}
-              className={`provider-card provider-card--${provider.health}`}
+              className={`provider-card provider-card--${provider.provider} provider-card--${provider.health}`}
             >
               <div className="provider-card__header">
-                <div>
-                  <h2 className="provider-card__title">
+                <h2 className="provider-card__title">
+                  <span className="provider-card__icon-shell">
                     <ProviderIcon provider={provider.provider} />
-                    <span>{provider.displayName}</span>
-                  </h2>
-                </div>
+                  </span>
+                  <span>{provider.displayName}</span>
+                </h2>
                 <span
                   className={`provider-pill provider-pill--${provider.health}`}
                 >
+                  <span className="provider-pill__dot" aria-hidden="true" />
                   {provider.health === "available"
                     ? t(language, "live")
                     : t(language, "unavailable")}
@@ -196,6 +229,24 @@ export function UsagePanel({
                 resetLabel={provider.weekly.resetLabel}
                 level={provider.weekly.level}
               />
+              {provider.thirdPartySession && (
+                <ProviderMetric
+                  language={language}
+                  label={provider.thirdPartySession.label}
+                  percent={provider.thirdPartySession.percent}
+                  resetLabel={provider.thirdPartySession.resetLabel}
+                  level={provider.thirdPartySession.level}
+                />
+              )}
+              {provider.thirdPartyWeekly && (
+                <ProviderMetric
+                  language={language}
+                  label={provider.thirdPartyWeekly.label}
+                  percent={provider.thirdPartyWeekly.percent}
+                  resetLabel={provider.thirdPartyWeekly.resetLabel}
+                  level={provider.thirdPartyWeekly.level}
+                />
+              )}
             </article>
           ))}
         </section>
@@ -221,9 +272,16 @@ function ProviderMetric({
     <div className="metric-row">
       <div className="metric-row__copy">
         <span className="metric-row__label">{label}</span>
-        <strong>{Math.round(percent)}%</strong>
+        <strong className="metric-row__value">{Math.round(percent)}%</strong>
       </div>
-      <div className="metric-row__bar" aria-hidden="true">
+      <div
+        className="metric-row__bar"
+        role="progressbar"
+        aria-label={`${label}: ${Math.round(percent)}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(Math.min(percent, 100))}
+      >
         <div
           className={`metric-row__fill metric-row__fill--${level}`}
           style={{ width: `${Math.min(percent, 100)}%` }}
@@ -237,18 +295,41 @@ function ProviderMetric({
   );
 }
 
-function CompactMetric({ label, percent }: { label: string; percent: number }) {
+function CompactMetric({
+  language,
+  label,
+  percent,
+  resetLabel,
+}: {
+  language: WidgetLanguage;
+  label: string;
+  percent: number;
+  resetLabel: string;
+}) {
   const level = getUsageLevel(percent);
   return (
     <div className="compact-metric">
-      <span className="compact-metric__label">{label}</span>
-      <div className="compact-metric__bar" aria-hidden="true">
+      <div className="compact-metric__header">
+        <span className="compact-metric__label">{label}</span>
+        <strong className="compact-metric__value">{Math.round(percent)}%</strong>
+      </div>
+      <div
+        className="compact-metric__bar"
+        role="progressbar"
+        aria-label={`${label}: ${Math.round(percent)}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(Math.min(percent, 100))}
+      >
         <div
           className={`compact-metric__fill compact-metric__fill--${level}`}
           style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>
-      <strong className="compact-metric__value">{Math.round(percent)}%</strong>
+      <div className="compact-metric__footer">
+        <span>{t(language, "resets")}</span>
+        <span>{resetLabel}</span>
+      </div>
     </div>
   );
 }
@@ -369,7 +450,22 @@ function UsageMark({ className }: { className?: string }) {
   );
 }
 
-function ProviderIcon({ provider }: { provider: "claude" | "codex" }) {
+function ProviderIcon({ provider }: { provider: "claude" | "codex" | "agy" }) {
+  if (provider === "agy") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="provider-icon provider-icon--agy"
+      >
+        <path
+          d="M12 2C12.5 6.8 17.2 11.5 22 12C17.2 12.5 12.5 17.2 12 22C11.5 17.2 6.8 12.5 2 12C6.8 11.5 11.5 6.8 12 2Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
+
   if (provider === "claude") {
     return (
       <svg

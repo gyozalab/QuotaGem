@@ -13,6 +13,8 @@ type TranslationKey =
   | "live"
   | "localSuffix"
   | "utcSuffix"
+  | "taipeiSuffix"
+  | "taipeiTime"
   | "settings"
   | "closeSettings"
   | "connectClaude"
@@ -90,6 +92,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     live: "Live",
     localSuffix: "Local",
     utcSuffix: "UTC",
+    taipeiSuffix: "Taipei",
+    taipeiTime: "Taipei time (UTC+8)",
     settings: "Settings",
     closeSettings: "Close settings",
     connectClaude: "Connect Claude",
@@ -168,6 +172,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     live: "即時",
     localSuffix: "本機",
     utcSuffix: "UTC",
+    taipeiSuffix: "台北",
+    taipeiTime: "台北時間 (UTC+8)",
     settings: "設定",
     closeSettings: "關閉設定",
     connectClaude: "連接 Claude",
