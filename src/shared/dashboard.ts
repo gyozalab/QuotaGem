@@ -16,7 +16,7 @@ export interface WidgetPreferences {
   notificationsEnabled: boolean;
   notificationLevel: "all" | "danger";
   language: WidgetLanguage;
-  timeDisplay: "utc" | "local";
+  timeDisplay: "utc" | "local" | "taipei";
   timeFormat: "24h" | "12h";
   dateFormat: DateFormatPreference;
   panelScale: PanelScalePercent;

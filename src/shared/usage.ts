@@ -1,7 +1,7 @@
 import { t, type WidgetLanguage } from "./i18n";
 import type { DateFormatPreference } from "./dashboard";
 
-export type ProviderId = "claude" | "codex";
+export type ProviderId = "claude" | "codex" | "agy";
 export type ProviderHealth = "available" | "stale" | "unavailable";
 
 export interface ProviderUsageSnapshot {
@@ -13,6 +13,11 @@ export interface ProviderUsageSnapshot {
   weeklyResetAt: number | string | Date | null;
   lastUpdated: string;
   health?: ProviderHealth;
+  // Extra fields for agy 3P models
+  thirdPartySessionPercent?: number;
+  thirdPartySessionResetAt?: number | string | Date | null;
+  thirdPartyWeeklyPercent?: number;
+  thirdPartyWeeklyResetAt?: number | string | Date | null;
 }
 
 export interface NormalizedProviderUsage {
@@ -31,6 +36,19 @@ export interface NormalizedProviderUsage {
     resetLabel: string;
     level: "normal" | "warning" | "danger";
   };
+  // Extra fields for agy 3P models
+  thirdPartySession?: {
+    label: string;
+    percent: number;
+    resetLabel: string;
+    level: "normal" | "warning" | "danger";
+  };
+  thirdPartyWeekly?: {
+    label: string;
+    percent: number;
+    resetLabel: string;
+    level: "normal" | "warning" | "danger";
+  };
   lastUpdated: string;
 }
 
@@ -43,7 +61,7 @@ export function normalizeProviderUsage(
   snapshot: ProviderUsageSnapshot,
   options: {
     language: WidgetLanguage;
-    timeDisplay: "utc" | "local";
+    timeDisplay: "utc" | "local" | "taipei";
     timeFormat: "24h" | "12h";
     dateFormat?: DateFormatPreference;
     warningThreshold?: number;
@@ -52,13 +70,56 @@ export function normalizeProviderUsage(
   },
 ): NormalizedProviderUsage {
   const thresholds = normalizeUsageThresholds(options);
+  const isAgy = snapshot.provider === "agy";
+  const lang = options.language;
+
+  const sessionLabel = isAgy
+    ? (lang === "zh-TW" ? "Gemini 5小時" : "Gemini 5h")
+    : t(lang, "session");
+  const weeklyLabel = isAgy
+    ? (lang === "zh-TW" ? "Gemini 每週" : "Gemini Weekly")
+    : t(lang, "weekly");
+
+  let thirdPartySession = undefined;
+  if (snapshot.thirdPartySessionPercent !== undefined) {
+    thirdPartySession = {
+      label: lang === "zh-TW" ? "Claude/GPT 5小時" : "Claude/GPT 5h",
+      percent: snapshot.thirdPartySessionPercent,
+      resetLabel: formatResetDisplay(
+        snapshot.thirdPartySessionResetAt ?? null,
+        options.language,
+        options.timeDisplay,
+        options.timeFormat,
+        options.dateFormat,
+        options.locale,
+      ),
+      level: getUsageLevel(snapshot.thirdPartySessionPercent, thresholds),
+    };
+  }
+
+  let thirdPartyWeekly = undefined;
+  if (snapshot.thirdPartyWeeklyPercent !== undefined) {
+    thirdPartyWeekly = {
+      label: lang === "zh-TW" ? "Claude/GPT 每週" : "Claude/GPT Weekly",
+      percent: snapshot.thirdPartyWeeklyPercent,
+      resetLabel: formatResetDisplay(
+        snapshot.thirdPartyWeeklyResetAt ?? null,
+        options.language,
+        options.timeDisplay,
+        options.timeFormat,
+        options.dateFormat,
+        options.locale,
+      ),
+      level: getUsageLevel(snapshot.thirdPartyWeeklyPercent, thresholds),
+    };
+  }
 
   return {
     provider: snapshot.provider,
     displayName: snapshot.displayName,
     health: snapshot.health ?? "available",
     session: {
-      label: t(options.language, "session"),
+      label: sessionLabel,
       percent: snapshot.sessionPercent,
       resetLabel: formatResetDisplay(
         snapshot.sessionResetAt,
@@ -71,7 +132,7 @@ export function normalizeProviderUsage(
       level: getUsageLevel(snapshot.sessionPercent, thresholds),
     },
     weekly: {
-      label: t(options.language, "weekly"),
+      label: weeklyLabel,
       percent: snapshot.weeklyPercent,
       resetLabel: formatResetDisplay(
         snapshot.weeklyResetAt,
@@ -83,6 +144,8 @@ export function normalizeProviderUsage(
       ),
       level: getUsageLevel(snapshot.weeklyPercent, thresholds),
     },
+    thirdPartySession,
+    thirdPartyWeekly,
     lastUpdated: snapshot.lastUpdated,
   };
 }
@@ -124,7 +187,7 @@ function getUsageLevel(
 function formatResetDisplay(
   value: number | string | Date | null,
   language: WidgetLanguage,
-  timeDisplay: "utc" | "local",
+  timeDisplay: "utc" | "local" | "taipei",
   timeFormat: "24h" | "12h",
   dateFormat: DateFormatPreference = "iso",
   locale = "en-US",
@@ -144,6 +207,11 @@ function formatResetDisplay(
     return t(language, "unavailable");
   }
 
+  const timeZone =
+    timeDisplay === "utc" ? "UTC" :
+    timeDisplay === "taipei" ? "Asia/Taipei" :
+    undefined;
+
   const parts = new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "2-digit",
@@ -151,14 +219,16 @@ function formatResetDisplay(
     hour: "2-digit",
     minute: "2-digit",
     hour12: timeFormat === "12h",
-    timeZone: timeDisplay === "utc" ? "UTC" : undefined,
+    timeZone,
   }).formatToParts(date);
 
   const pick = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
 
   const suffix =
-    timeDisplay === "utc" ? t(language, "utcSuffix") : t(language, "localSuffix");
+    timeDisplay === "utc" ? t(language, "utcSuffix") :
+    timeDisplay === "taipei" ? t(language, "taipeiSuffix") :
+    t(language, "localSuffix");
   const dayPeriod = pick("dayPeriod");
 
   return `${formatDateParts({

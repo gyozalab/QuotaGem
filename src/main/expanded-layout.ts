@@ -1,4 +1,4 @@
-const EXPANDED_PANEL_MAX_HEIGHT = 500;
+const EXPANDED_PANEL_MAX_HEIGHT = 850;
 const EXPANDED_PANEL_MIN_HEIGHT = 220;
 
 export function getExpandedWindowHeight({

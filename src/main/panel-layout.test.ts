@@ -24,8 +24,8 @@ describe("getPanelSize", () => {
         expandedWindowHeight: 488,
       }),
     ).toEqual({
-      width: 354,
-      height: 150,
+      width: 502,
+      height: 289,
     });
   });
 });
