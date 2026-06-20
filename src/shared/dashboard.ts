@@ -3,7 +3,11 @@ import type { PanelScalePercent } from "./panel-scale";
 import type { PanelTone } from "./panel-themes";
 import type { NormalizedProviderUsage } from "./usage";
 
-export type ProviderVisibility = "both" | "claude" | "codex";
+export interface ProviderVisibility {
+  claude: boolean;
+  codex: boolean;
+  antigravity: boolean;
+}
 export type DateFormatPreference = "iso" | "mdy" | "dmy";
 
 export interface WidgetPreferences {
@@ -16,7 +20,7 @@ export interface WidgetPreferences {
   notificationsEnabled: boolean;
   notificationLevel: "all" | "danger";
   language: WidgetLanguage;
-  timeDisplay: "utc" | "local" | "taipei";
+  timeDisplay: "utc" | "local";
   timeFormat: "24h" | "12h";
   dateFormat: DateFormatPreference;
   panelScale: PanelScalePercent;

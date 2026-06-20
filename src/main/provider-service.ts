@@ -10,9 +10,13 @@ import {
   extractClaudeUsage,
 } from "../providers/claude";
 import { extractLatestCodexUsage } from "../providers/codex";
-import { extractLatestAgyUsage } from "../providers/agy";
 import { loadProviderSnapshots } from "../providers";
-import type { DateFormatPreference, UsageDashboardState } from "../shared/dashboard";
+import { coerceProviderVisibility } from "../shared/provider-visibility";
+import type {
+  DateFormatPreference,
+  ProviderVisibility,
+  UsageDashboardState,
+} from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
 import { normalizePanelScale } from "../shared/panel-scale";
 import type { PanelTone } from "../shared/panel-themes";
@@ -22,6 +26,7 @@ import {
   normalizeUsageThresholds,
   type ProviderUsageSnapshot,
 } from "../shared/usage";
+import { readAntigravitySnapshot } from "./antigravity-service";
 import { resolveClaudeDebugPath } from "./runtime-paths";
 
 export interface AppStoreShape {
@@ -29,14 +34,14 @@ export interface AppStoreShape {
   claudeOrganizationId?: string;
   preferredDisplayMode?: "expanded" | "compact";
   launchAtLogin?: boolean;
-  providerVisibility?: "both" | "claude" | "codex";
+  providerVisibility?: ProviderVisibility | "both" | "claude" | "codex";
   refreshIntervalMinutes?: number;
   warningThreshold?: number;
   dangerThreshold?: number;
   notificationsEnabled?: boolean;
   notificationLevel?: "all" | "danger";
   language?: WidgetLanguage;
-  timeDisplay?: "utc" | "local" | "taipei";
+  timeDisplay?: "utc" | "local";
   timeFormat?: "24h" | "12h";
   dateFormat?: DateFormatPreference;
   panelScale?: number;
@@ -80,9 +85,9 @@ export async function buildDashboardState(
       read: readCodexSnapshot,
     },
     {
-      provider: "agy",
-      displayName: "agy",
-      read: readAgySnapshot,
+      provider: "antigravity",
+      displayName: "Antigravity",
+      read: readAntigravitySnapshot,
     },
   ]);
 
@@ -90,7 +95,7 @@ export async function buildDashboardState(
     providers: snapshots.map((snapshot) =>
       normalizeProviderUsage(snapshot, {
         language: store.get("language", "en"),
-        timeDisplay: "taipei",
+        timeDisplay: store.get("timeDisplay", "utc"),
         timeFormat: store.get("timeFormat", "24h"),
         dateFormat: store.get("dateFormat", "iso"),
         warningThreshold: thresholds.warningThreshold,
@@ -106,7 +111,7 @@ export async function buildDashboardState(
     preferences: {
       preferredDisplayMode: store.get("preferredDisplayMode", "expanded"),
       launchAtLogin,
-      providerVisibility: store.get("providerVisibility", "both"),
+      providerVisibility: coerceProviderVisibility(store.get("providerVisibility")),
       refreshIntervalMinutes: store.get("refreshIntervalMinutes", 5),
       warningThreshold: thresholds.warningThreshold,
       dangerThreshold: thresholds.dangerThreshold,
@@ -133,16 +138,6 @@ async function readCodexSnapshot(): Promise<ProviderUsageSnapshot | null> {
 
   const content = await fs.readFile(latestFile, "utf8");
   return extractLatestCodexUsage(content);
-}
-
-async function readAgySnapshot(): Promise<ProviderUsageSnapshot | null> {
-  const agyFile = path.join(
-    os.homedir(),
-    "Library/Mobile Documents/com~apple~CloudDocs/Claude/QuotaGem/agy-monitor/agy-usage.jsonl",
-  );
-  const content = await fs.readFile(agyFile, "utf8").catch(() => null);
-  if (!content) return null;
-  return extractLatestAgyUsage(content);
 }
 
 async function findNewestJsonlFile(root: string): Promise<string | null> {
@@ -398,7 +393,7 @@ function buildLastUpdatedLabel(
   snapshots: ProviderUsageSnapshot[],
   preferences: {
     language: WidgetLanguage;
-    timeDisplay: "utc" | "local" | "taipei";
+    timeDisplay: "utc" | "local";
     timeFormat: "24h" | "12h";
     dateFormat: DateFormatPreference;
   },
@@ -438,19 +433,16 @@ function buildLastUpdatedLabel(
     hour: "2-digit",
     minute: "2-digit",
     hour12: preferences.timeFormat === "12h",
-    timeZone:
-      preferences.timeDisplay === "utc" ? "UTC" :
-      preferences.timeDisplay === "taipei" ? "Asia/Taipei" :
-      undefined,
+    timeZone: preferences.timeDisplay === "utc" ? "UTC" : undefined,
   }).formatToParts(date);
 
   const pick = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
   const dayPeriod = pick("dayPeriod");
   const suffix =
-    preferences.timeDisplay === "utc" ? t(preferences.language, "utcSuffix") :
-    preferences.timeDisplay === "taipei" ? t(preferences.language, "taipeiSuffix") :
-    t(preferences.language, "localSuffix");
+    preferences.timeDisplay === "utc"
+      ? t(preferences.language, "utcSuffix")
+      : t(preferences.language, "localSuffix");
   const formattedDate = formatDateParts({
     year: pick("year"),
     month: pick("month"),

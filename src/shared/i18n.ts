@@ -8,13 +8,13 @@ type TranslationKey =
   | "refreshing"
   | "session"
   | "weekly"
+  | "fiveHourShort"
+  | "weeklyShort"
   | "resets"
   | "unavailable"
   | "live"
   | "localSuffix"
   | "utcSuffix"
-  | "taipeiSuffix"
-  | "taipeiTime"
   | "settings"
   | "closeSettings"
   | "connectClaude"
@@ -27,6 +27,9 @@ type TranslationKey =
   | "bothProviders"
   | "claudeOnly"
   | "codexOnly"
+  | "claudeLabel"
+  | "codexLabel"
+  | "antigravityLabel"
   | "refreshInterval"
   | "warningThreshold"
   | "dangerThreshold"
@@ -87,13 +90,13 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     refreshing: "Refreshing...",
     session: "Session",
     weekly: "Weekly",
+    fiveHourShort: "5h",
+    weeklyShort: "Weekly",
     resets: "Resets",
     unavailable: "Unavailable",
     live: "Live",
     localSuffix: "Local",
     utcSuffix: "UTC",
-    taipeiSuffix: "Taipei",
-    taipeiTime: "Taipei time (UTC+8)",
     settings: "Settings",
     closeSettings: "Close settings",
     connectClaude: "Connect Claude",
@@ -106,6 +109,9 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     bothProviders: "Claude + Codex",
     claudeOnly: "Claude only",
     codexOnly: "Codex only",
+    claudeLabel: "Claude",
+    codexLabel: "Codex",
+    antigravityLabel: "Antigravity",
     refreshInterval: "Refresh interval",
     warningThreshold: "Warning threshold",
     dangerThreshold: "Danger threshold",
@@ -167,13 +173,13 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     refreshing: "重新整理中...",
     session: "每五小時",
     weekly: "每週",
+    fiveHourShort: "5h",
+    weeklyShort: "週",
     resets: "重設",
     unavailable: "無法取得",
     live: "即時",
     localSuffix: "本機",
     utcSuffix: "UTC",
-    taipeiSuffix: "台北",
-    taipeiTime: "台北時間 (UTC+8)",
     settings: "設定",
     closeSettings: "關閉設定",
     connectClaude: "連接 Claude",
@@ -186,6 +192,9 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     bothProviders: "Claude + Codex",
     claudeOnly: "只顯示 Claude",
     codexOnly: "只顯示 Codex",
+    claudeLabel: "Claude",
+    codexLabel: "Codex",
+    antigravityLabel: "Antigravity",
     refreshInterval: "更新頻率",
     warningThreshold: "警示門檻",
     dangerThreshold: "危險門檻",

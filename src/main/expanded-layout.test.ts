@@ -12,13 +12,22 @@ describe("getExpandedWindowHeight", () => {
     ).toBe(318);
   });
 
-  it("caps the height when content would exceed the expanded panel maximum", () => {
+  it("allows all three provider cards to exceed the old 500px cap", () => {
+    expect(
+      getExpandedWindowHeight({
+        contentHeight: 640,
+        settingsOpen: false,
+      }),
+    ).toBe(640);
+  });
+
+  it("retains a safety cap for exceptionally tall content", () => {
     expect(
       getExpandedWindowHeight({
         contentHeight: 900,
         settingsOpen: false,
       }),
-    ).toBe(850);
+    ).toBe(680);
   });
 
   it("keeps the full height while settings are open", () => {
@@ -27,6 +36,6 @@ describe("getExpandedWindowHeight", () => {
         contentHeight: 318,
         settingsOpen: true,
       }),
-    ).toBe(850);
+    ).toBe(500);
   });
 });

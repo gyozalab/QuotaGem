@@ -2,9 +2,6 @@
 
 繁體中文 | [English](./README.en.md)
 
-<img src="./docs/images/cover.png" alt="QuotaGem 封面圖" width="60%" />
-
-
 一個為 `Claude` 與 `Codex` 用量而生的 Windows 系統匣小工具。
 
 它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
@@ -14,32 +11,32 @@
 - 重設時間
 - 警告與危險門檻
 
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="45%" />
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
 ## 畫面預覽
 
 ### 精簡面板
 
-<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="45%" />
+<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="66%" />
 
 ### 單獨顯示 Claude 或 Codex
 
 <p>
-  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="33%" />
-  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="33%" />
+  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="49%" />
+  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="49%" />
 </p>
 
 ### 設定面板
 
-<img src="./docs/images/settings-panel.png" alt="QuotaGem 設定面板" width="49%" />
+<img src="./docs/images/settings-panel.png" alt="QuotaGem 設定面板" width="66%" />
 
 ### 淺色主題
 
-<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="49%" />
+<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="66%" />
 
 ### 系統匣圖示
 
-<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="25%" />
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="33%" />
 
 ## 你可以期待什麼
 

@@ -1,7 +1,10 @@
 import type { Ref } from "react";
 
 import { t, type WidgetLanguage } from "../shared/i18n";
-import type { NormalizedProviderUsage } from "../shared/usage";
+import type {
+  NormalizedProviderUsage,
+  NormalizedUsageTrack,
+} from "../shared/usage";
 
 export interface UsagePanelProps {
   mode: "expanded" | "compact";
@@ -31,26 +34,13 @@ export function UsagePanel({
   onClose,
 }: UsagePanelProps) {
   if (mode === "compact") {
-    const colClass =
-      providers.length >= 3
-        ? " compact-widget__columns--triple"
-        : providers.length === 1
-          ? " compact-widget__columns--single"
-          : "";
-
     return (
       <main className="compact-shell">
         <section className="compact-widget">
           <div className="compact-widget__toolbar drag-region">
-            <div className="compact-widget__identity">
-              <span className="compact-widget__brand">
-                <UsageMark className="compact-widget__mark" />
-                <span>QuotaGem</span>
-              </span>
-              <span className="compact-widget__meta" aria-live="polite">
-                {loading ? t(language, "refreshing") : lastUpdatedLabel}
-              </span>
-            </div>
+            <span className="compact-widget__meta">
+              {loading ? t(language, "refreshing") : lastUpdatedLabel}
+            </span>
             <div className="compact-widget__toolbar-actions no-drag">
               <button
                 className="icon-button icon-button--icon no-drag"
@@ -77,51 +67,23 @@ export function UsagePanel({
             </div>
           </div>
           <div className="compact-widget__content no-drag">
-            <div className={`compact-widget__columns${colClass}`}>
+            <div
+              className={`compact-widget__rings${
+                providers.length === 1 ? " compact-widget__rings--single" : ""
+              }${
+                providers.length >= 3 ? " compact-widget__rings--three" : ""
+              }`}
+            >
               {providers.map((provider) => (
                 <article
                   key={provider.provider}
-                  className={`compact-provider compact-provider--${provider.provider} compact-provider--${provider.health}`}
+                  className={`compact-provider compact-provider--${provider.health}`}
                 >
-                  <div className="compact-provider__header">
-                    <span className="compact-provider__title">
-                      <ProviderIcon provider={provider.provider} />
-                      <span>{provider.displayName}</span>
-                    </span>
-                    <span className="compact-provider__health">
-                      {provider.health === "available"
-                        ? t(language, "live")
-                        : t(language, "unavailable")}
-                    </span>
-                  </div>
-                  <CompactMetric
-                    language={language}
-                    label={provider.session.label}
-                    percent={provider.session.percent}
-                    resetLabel={provider.session.resetLabel}
-                  />
-                  <CompactMetric
-                    language={language}
-                    label={provider.weekly.label}
-                    percent={provider.weekly.percent}
-                    resetLabel={provider.weekly.resetLabel}
-                  />
-                  {provider.thirdPartySession && (
-                    <CompactMetric
-                      language={language}
-                      label={provider.thirdPartySession.label}
-                      percent={provider.thirdPartySession.percent}
-                      resetLabel={provider.thirdPartySession.resetLabel}
-                    />
-                  )}
-                  {provider.thirdPartyWeekly && (
-                    <CompactMetric
-                      language={language}
-                      label={provider.thirdPartyWeekly.label}
-                      percent={provider.thirdPartyWeekly.percent}
-                      resetLabel={provider.thirdPartyWeekly.resetLabel}
-                    />
-                  )}
+                  <CompactRing provider={provider} language={language} />
+                  <span className="compact-provider__title">
+                    <ProviderIcon provider={provider.provider} />
+                    <span>{provider.displayName}</span>
+                  </span>
                 </article>
               ))}
             </div>
@@ -135,14 +97,11 @@ export function UsagePanel({
     <main className="app-shell">
       <section ref={panelRef} className="glass-panel expanded-panel">
         <header className="panel-header drag-region">
-          <div className="panel-header__identity">
-            <span className="panel-header__brand">
-              <UsageMark className="panel-header__mark" />
-              <span>QuotaGem</span>
-            </span>
-            <span className="header-meta" aria-live="polite">
+          <div className="panel-header__meta-group">
+            <span className="header-meta">
               {loading ? t(language, "refreshing") : lastUpdatedLabel}
             </span>
+            <UsageMark className="panel-header__mark" />
           </div>
           <div className="panel-header__actions no-drag">
             <button
@@ -192,146 +151,341 @@ export function UsagePanel({
           </div>
         </header>
 
-        <section className="provider-grid">
-          {providers.map((provider) => (
-            <article
-              key={provider.provider}
-              className={`provider-card provider-card--${provider.provider} provider-card--${provider.health}`}
-            >
-              <div className="provider-card__header">
-                <h2 className="provider-card__title">
-                  <span className="provider-card__icon-shell">
-                    <ProviderIcon provider={provider.provider} />
-                  </span>
-                  <span>{provider.displayName}</span>
-                </h2>
-                <span
-                  className={`provider-pill provider-pill--${provider.health}`}
-                >
-                  <span className="provider-pill__dot" aria-hidden="true" />
-                  {provider.health === "available"
-                    ? t(language, "live")
-                    : t(language, "unavailable")}
-                </span>
-              </div>
+        <section className="expanded-providers">
+          {providers.map((provider) => {
+            const grouped = Boolean(
+              provider.groups && provider.groups.length >= 2,
+            );
 
-              <ProviderMetric
-                language={language}
-                label={provider.session.label}
-                percent={provider.session.percent}
-                resetLabel={provider.session.resetLabel}
-                level={provider.session.level}
-              />
-              <ProviderMetric
-                language={language}
-                label={provider.weekly.label}
-                percent={provider.weekly.percent}
-                resetLabel={provider.weekly.resetLabel}
-                level={provider.weekly.level}
-              />
-              {provider.thirdPartySession && (
-                <ProviderMetric
-                  language={language}
-                  label={provider.thirdPartySession.label}
-                  percent={provider.thirdPartySession.percent}
-                  resetLabel={provider.thirdPartySession.resetLabel}
-                  level={provider.thirdPartySession.level}
-                />
-              )}
-              {provider.thirdPartyWeekly && (
-                <ProviderMetric
-                  language={language}
-                  label={provider.thirdPartyWeekly.label}
-                  percent={provider.thirdPartyWeekly.percent}
-                  resetLabel={provider.thirdPartyWeekly.resetLabel}
-                  level={provider.thirdPartyWeekly.level}
-                />
-              )}
-            </article>
-          ))}
+            return (
+              <article
+                key={provider.provider}
+                className={`provider-block provider-block--${provider.health}`}
+              >
+                <div className="provider-block__title">
+                  <ProviderIcon provider={provider.provider} />
+                  <span>{provider.displayName}</span>
+                </div>
+
+                {grouped ? (
+                  provider.groups!.map((group, groupIndex) => (
+                    <div
+                      key={`${groupIndex}-${group.label}`}
+                      className="provider-group"
+                    >
+                      <div className="provider-group__label">
+                        <span
+                          className={`provider-group__dot provider-group__dot--${
+                            group.label.toLowerCase().startsWith("gemini")
+                              ? "gemini"
+                              : "others"
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span>{getExpandedGroupLabel(group.label)}</span>
+                      </div>
+                      <div className="provider-group__rows">
+                        <QuotaRow
+                          label={t(language, "fiveHourShort")}
+                          track={group.session}
+                        />
+                        <QuotaRow
+                          label={t(language, "weeklyShort")}
+                          track={group.weekly}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="provider-block__rows">
+                    <QuotaRow
+                      label={t(language, "fiveHourShort")}
+                      track={provider.session}
+                    />
+                    <QuotaRow
+                      label={t(language, "weeklyShort")}
+                      track={provider.weekly}
+                    />
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </section>
       </section>
     </main>
   );
 }
 
-function ProviderMetric({
-  language,
+// reset label 是 normalize 階段格式化好的完整字串（含年份）。expanded 行空間有限，
+// 顯示時去掉年份（5h / 週的重置都在近期，年份無資訊量）。三種 dateFormat 的年份
+// 位置不同：iso 在開頭、mdy/dmy 在末段，兩條 replace 各自處理。
+export function stripYear(label: string): string {
+  return label.replace(/^\d{4}[-/]/, "").replace(/[-/]\d{4}(?=\s|$)/, "");
+}
+
+function QuotaRow({
   label,
-  percent,
-  resetLabel,
-  level,
+  track,
 }: {
-  language: WidgetLanguage;
   label: string;
-  percent: number;
-  resetLabel: string;
-  level: "normal" | "warning" | "danger";
+  track: NormalizedUsageTrack;
 }) {
+  const danger = track.level === "danger";
+  const warning = track.level === "warning";
+
   return (
-    <div className="metric-row">
-      <div className="metric-row__copy">
-        <span className="metric-row__label">{label}</span>
-        <strong className="metric-row__value">{Math.round(percent)}%</strong>
-      </div>
+    <div
+      className={`quota-row${danger ? " quota-row--danger" : ""}${
+        warning ? " quota-row--warning" : ""
+      }`}
+    >
       <div
-        className="metric-row__bar"
-        role="progressbar"
-        aria-label={`${label}: ${Math.round(percent)}%`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(Math.min(percent, 100))}
-      >
-        <div
-          className={`metric-row__fill metric-row__fill--${level}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
-        />
-      </div>
-      <div className="metric-row__footer">
-        <span>{t(language, "resets")}</span>
-        <span>{resetLabel}</span>
+        className={`quota-row__fill quota-row__fill--${track.level}`}
+        style={{ width: `${clampPercent(track.percent)}%` }}
+        aria-hidden="true"
+      />
+      <div className="quota-row__content">
+        <span className="quota-row__label">{label}</span>
+        <span className="quota-row__readout">
+          {danger ? <AlertIcon /> : warning ? <WarnIcon /> : null}
+          <strong className="quota-row__value">
+            {Math.round(track.percent)}%
+          </strong>
+          <span className="quota-row__reset">
+            ↻ {stripYear(track.resetLabel)}
+          </span>
+        </span>
       </div>
     </div>
   );
 }
 
-function CompactMetric({
-  language,
-  label,
-  percent,
-  resetLabel,
-}: {
-  language: WidgetLanguage;
-  label: string;
-  percent: number;
-  resetLabel: string;
-}) {
-  const level = getUsageLevel(percent);
+function AlertIcon() {
   return (
-    <div className="compact-metric">
-      <div className="compact-metric__header">
-        <span className="compact-metric__label">{label}</span>
-        <strong className="compact-metric__value">{Math.round(percent)}%</strong>
-      </div>
-      <div
-        className="compact-metric__bar"
-        role="progressbar"
-        aria-label={`${label}: ${Math.round(percent)}%`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(Math.min(percent, 100))}
-      >
-        <div
-          className={`compact-metric__fill compact-metric__fill--${level}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
-        />
-      </div>
-      <div className="compact-metric__footer">
-        <span>{t(language, "resets")}</span>
-        <span>{resetLabel}</span>
-      </div>
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="quota-row__alert">
+      <path
+        d="M8 2.4 14.4 13.2H1.6z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 6.6v3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="11.3" r="0.85" fill="currentColor" />
+    </svg>
+  );
+}
+
+function WarnIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className="quota-row__alert quota-row__alert--warn"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M8 5v3.3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="10.7" r="0.85" fill="currentColor" />
+    </svg>
+  );
+}
+
+const RING_CIRCUMFERENCE = 125.664;
+const RING_HALF = 62.832;
+
+function harderPercent(
+  a: { percent: number },
+  b: { percent: number },
+): number {
+  return Math.max(a.percent, b.percent);
+}
+
+function CompactRing({
+  provider,
+  language,
+}: {
+  provider: NormalizedProviderUsage;
+  language: WidgetLanguage;
+}) {
+  const unavailable = provider.health !== "available";
+
+  if (
+    provider.provider === "antigravity" &&
+    provider.groups &&
+    provider.groups.length >= 2
+  ) {
+    return (
+      <SplitRing
+        provider={provider}
+        groups={provider.groups}
+        language={language}
+        unavailable={unavailable}
+      />
+    );
+  }
+
+  const value = harderPercent(provider.session, provider.weekly);
+  const level = getUsageLevel(value);
+  const title = unavailable
+    ? `${provider.displayName} · ${t(language, "unavailable")}`
+    : `${provider.displayName} · ${provider.session.label} ${Math.round(
+        provider.session.percent,
+      )}% · ${provider.weekly.label} ${Math.round(provider.weekly.percent)}%`;
+
+  return (
+    <div
+      className={`compact-ring${unavailable ? " compact-ring--off" : ""}`}
+      role="img"
+      aria-label={
+        unavailable
+          ? `${provider.displayName} ${t(language, "unavailable")}`
+          : `${provider.displayName} ${Math.round(value)}%`
+      }
+      title={title}
+    >
+      <svg className="compact-ring__svg" viewBox="0 0 50 50" aria-hidden="true">
+        <circle className="compact-ring__track" cx="25" cy="25" r="20" />
+        {!unavailable && (
+          <circle
+            className={`compact-ring__fill compact-ring__fill--${level}`}
+            cx="25"
+            cy="25"
+            r="20"
+            strokeDasharray={`${
+              (RING_CIRCUMFERENCE * clampPercent(value)) / 100
+            } ${RING_CIRCUMFERENCE}`}
+            transform="rotate(-90 25 25)"
+          />
+        )}
+      </svg>
+      <span className="compact-ring__value">
+        {unavailable ? "—" : `${Math.round(value)}%`}
+      </span>
     </div>
   );
+}
+
+function SplitRing({
+  provider,
+  groups,
+  language,
+  unavailable,
+}: {
+  provider: NormalizedProviderUsage;
+  groups: NonNullable<NormalizedProviderUsage["groups"]>;
+  language: WidgetLanguage;
+  unavailable: boolean;
+}) {
+  const gemini =
+    groups.find((group) => group.label.toLowerCase().startsWith("gemini")) ??
+    groups[0];
+  const others = groups.find((group) => group !== gemini) ?? groups[1];
+  const geminiValue = harderPercent(gemini.session, gemini.weekly);
+  const othersValue = harderPercent(others.session, others.weekly);
+  const geminiLevel = getUsageLevel(geminiValue);
+  const othersLevel = getUsageLevel(othersValue);
+  // 用實際比對到的群組名，畸形資料（沒有 gemini 群組時 fallback groups[0]）才不會被誤標成 Gemini/Others。
+  const geminiLabel = getExpandedGroupLabel(gemini.label);
+  const othersLabel = getExpandedGroupLabel(others.label);
+
+  const title = unavailable
+    ? `${provider.displayName} · ${t(language, "unavailable")}`
+    : `${provider.displayName}\n${geminiLabel} · ${gemini.session.label} ${Math.round(
+        gemini.session.percent,
+      )}% · ${gemini.weekly.label} ${Math.round(
+        gemini.weekly.percent,
+      )}%\n${othersLabel} · ${others.session.label} ${Math.round(
+        others.session.percent,
+      )}% · ${others.weekly.label} ${Math.round(others.weekly.percent)}%`;
+
+  return (
+    <div
+      className={`compact-ring compact-ring--split${
+        unavailable ? " compact-ring--off" : ""
+      }`}
+      role="img"
+      aria-label={
+        unavailable
+          ? `${provider.displayName} ${t(language, "unavailable")}`
+          : `${geminiLabel} ${Math.round(geminiValue)}%, ${othersLabel} ${Math.round(
+              othersValue,
+            )}%`
+      }
+      title={title}
+    >
+      <svg className="compact-ring__svg" viewBox="0 0 50 50" aria-hidden="true">
+        <path className="compact-ring__track" d="M25,5 A20,20 0 0 0 25,45" />
+        <path className="compact-ring__track" d="M25,5 A20,20 0 0 1 25,45" />
+        {!unavailable && (
+          <path
+            className={`compact-ring__fill compact-ring__fill--${geminiLevel}`}
+            d="M25,5 A20,20 0 0 0 25,45"
+            strokeDasharray={`${
+              (RING_HALF * clampPercent(geminiValue)) / 100
+            } ${RING_HALF}`}
+          />
+        )}
+        {!unavailable && (
+          <path
+            className={`compact-ring__fill compact-ring__fill--${othersLevel}`}
+            d="M25,5 A20,20 0 0 1 25,45"
+            strokeDasharray={`${
+              (RING_HALF * clampPercent(othersValue)) / 100
+            } ${RING_HALF}`}
+          />
+        )}
+        <line
+          className="compact-ring__divider"
+          x1="25"
+          y1="17"
+          x2="25"
+          y2="33"
+        />
+      </svg>
+      {unavailable ? (
+        <span className="compact-ring__value">—</span>
+      ) : (
+        <>
+          <span className="compact-ring__value compact-ring__value--gemini">
+            {Math.round(geminiValue)}
+          </span>
+          <span className="compact-ring__value compact-ring__value--others">
+            {Math.round(othersValue)}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function clampPercent(percent: number): number {
+  return Math.min(Math.max(percent, 0), 100);
+}
+
+function getExpandedGroupLabel(label: string): string {
+  if (label === "Gemini Models") {
+    return "Gemini";
+  }
+
+  return label === "Claude and GPT models" ? "Claude and GPT" : label;
 }
 
 function getUsageLevel(percent: number): "normal" | "warning" | "danger" {
@@ -450,22 +604,11 @@ function UsageMark({ className }: { className?: string }) {
   );
 }
 
-function ProviderIcon({ provider }: { provider: "claude" | "codex" | "agy" }) {
-  if (provider === "agy") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        className="provider-icon provider-icon--agy"
-      >
-        <path
-          d="M12 2C12.5 6.8 17.2 11.5 22 12C17.2 12.5 12.5 17.2 12 22C11.5 17.2 6.8 12.5 2 12C6.8 11.5 11.5 6.8 12 2Z"
-          fill="currentColor"
-        />
-      </svg>
-    );
-  }
-
+function ProviderIcon({
+  provider,
+}: {
+  provider: NormalizedProviderUsage["provider"];
+}) {
   if (provider === "claude") {
     return (
       <svg
@@ -479,6 +622,17 @@ function ProviderIcon({ provider }: { provider: "claude" | "codex" | "agy" }) {
           fillRule="nonzero"
         />
       </svg>
+    );
+  }
+
+  if (provider === "antigravity") {
+    return (
+      <img
+        src="./antigravity-icon.png"
+        alt=""
+        aria-hidden="true"
+        className="provider-icon provider-icon--antigravity"
+      />
     );
   }
 

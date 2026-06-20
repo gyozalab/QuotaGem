@@ -53,7 +53,7 @@ function createState({
     preferences: {
       preferredDisplayMode: "expanded",
       launchAtLogin: false,
-      providerVisibility: "both",
+      providerVisibility: { claude: true, codex: true, antigravity: true },
       refreshIntervalMinutes: 5,
       warningThreshold: 75,
       dangerThreshold: 90,

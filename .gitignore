@@ -3,3 +3,6 @@ dist/
 dist-electron/
 *.tsbuildinfo
 claude-debug.json
+release/
+# Antigravity probe captures — contain account PII (email/plan). Never commit.
+scripts/agy_*.json

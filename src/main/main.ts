@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 import type { UsageDashboardState } from "../shared/dashboard";
 import { t } from "../shared/i18n";
+import { coerceProviderVisibility } from "../shared/provider-visibility";
 import {
   getLaunchAtLoginRuntime,
   readLaunchAtLoginPreference,
@@ -53,7 +54,7 @@ const store = new Store<AppStoreShape>({
   defaults: {
     preferredDisplayMode: "expanded",
     launchAtLogin: false,
-    providerVisibility: "both",
+    providerVisibility: { claude: true, codex: true, antigravity: true },
     refreshIntervalMinutes: 5,
     warningThreshold: 75,
     dangerThreshold: 90,
@@ -112,6 +113,7 @@ function createCompactWindow() {
     mode: "compact",
     panelScale: getCurrentPanelScale(),
     expandedWindowHeight,
+    compactProviderCount: getCompactProviderCount(),
   });
   compactWindow = new BrowserWindow({
     width: size.width,
@@ -163,16 +165,11 @@ function createTray() {
     userDataPath: app.getPath("userData"),
   });
   const image = nativeImage.createFromPath(iconPath).resize({ width: 20, height: 20 });
-  image.setTemplateImage(true);
   const language = store.get("language", "en");
 
   tray = new Tray(image);
   tray.setToolTip(t(language, "trayUsageWidget"));
-  let lastTrayClick = 0;
   tray.on("click", () => {
-    const now = Date.now();
-    if (now - lastTrayClick < 300) return;
-    lastTrayClick = now;
     togglePreferredWindow();
   });
   tray.on("right-click", () => {
@@ -433,12 +430,8 @@ function positionWindow(
     mode,
     panelScale: getCurrentPanelScale(),
     expandedWindowHeight,
+    compactProviderCount: getCompactProviderCount(),
   });
-
-  const wasResizable = window.isResizable();
-  if (!wasResizable) {
-    window.setResizable(true);
-  }
 
   window.setBounds({
     width: size.width,
@@ -446,13 +439,13 @@ function positionWindow(
     x: workArea.x + workArea.width - size.width - WINDOW_MARGIN,
     y: workArea.y + workArea.height - size.height - WINDOW_MARGIN,
   });
-
-  if (!wasResizable) {
-    window.setResizable(false);
-  }
 }
 
-app.commandLine.appendSwitch("disable-gpu");
+function getCompactProviderCount(): number {
+  const visibility = coerceProviderVisibility(store.get("providerVisibility"));
+  return Math.max(1, Object.values(visibility).filter(Boolean).length);
+}
+
 app.whenReady().then(() => {
   primeClaudeSession();
   syncLaunchAtLoginPreference(

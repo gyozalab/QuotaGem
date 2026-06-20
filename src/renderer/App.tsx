@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import type { ProviderVisibility, UsageDashboardState } from "../shared/dashboard";
+import type { UsageDashboardState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
 import {
   getPanelScaleFromSliderIndex,
@@ -15,12 +15,10 @@ import {
 } from "../shared/panel-themes";
 import { filterProvidersByVisibility } from "../shared/provider-visibility";
 import { type NormalizedProviderUsage } from "../shared/usage";
-import { LoginPage } from "./LoginPage";
 import { UsagePanel } from "./UsagePanel";
 import "./styles.css";
 
 type SurfaceMode = "expanded" | "compact";
-type AppView = "dashboard" | "login";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -50,30 +48,27 @@ function getSurfaceMode(): SurfaceMode {
   return params.get("mode") === "compact" ? "compact" : "expanded";
 }
 
-function getAppView(): AppView {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("view") === "login" ? "login" : "dashboard";
-}
+const PROVIDER_VISIBILITY_ORDER = [
+  { id: "claude", labelKey: "claudeLabel" },
+  { id: "codex", labelKey: "codexLabel" },
+  { id: "antigravity", labelKey: "antigravityLabel" },
+] as const;
 
 function App() {
-  return getAppView() === "login" ? <LoginPage /> : <UsageDashboardApp />;
-}
-
-function UsageDashboardApp() {
   const [dashboardState, setDashboardState] = useState<UsageDashboardState>({
     providers: DEFAULT_PROVIDERS,
     lastUpdatedLabel: "Waiting for provider data",
     preferences: {
       preferredDisplayMode: "expanded",
       launchAtLogin: false,
-      providerVisibility: "both",
+      providerVisibility: { claude: true, codex: true, antigravity: true },
       refreshIntervalMinutes: 5,
       warningThreshold: 75,
       dangerThreshold: 90,
       notificationsEnabled: true,
       notificationLevel: "all",
       language: "en",
-      timeDisplay: "taipei",
+      timeDisplay: "utc",
       timeFormat: "24h",
       dateFormat: "iso",
       panelScale: 100,
@@ -337,19 +332,27 @@ function UsageDashboardApp() {
             </label>
             <label className="settings-field">
               <span>{t(language, "providerVisibility")}</span>
-              <select
-                value={draftPreferences.providerVisibility}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    providerVisibility: event.target.value as ProviderVisibility,
-                  }));
-                }}
-              >
-                <option value="both">{t(language, "bothProviders")}</option>
-                <option value="claude">{t(language, "claudeOnly")}</option>
-                <option value="codex">{t(language, "codexOnly")}</option>
-              </select>
+              <div className="settings-checkboxes">
+                {PROVIDER_VISIBILITY_ORDER.map(({ id, labelKey }) => (
+                  <label key={id} className="settings-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={draftPreferences.providerVisibility[id]}
+                      onChange={(event) => {
+                        const { checked } = event.target;
+                        setDraftPreferences((current) => ({
+                          ...current,
+                          providerVisibility: {
+                            ...current.providerVisibility,
+                            [id]: checked,
+                          },
+                        }));
+                      }}
+                    />
+                    <span>{t(language, labelKey)}</span>
+                  </label>
+                ))}
+              </div>
             </label>
             <label className="settings-field">
               <span>{t(language, "refreshInterval")}</span>
@@ -405,7 +408,22 @@ function UsageDashboardApp() {
                 }}
               />
             </label>
-<label className="settings-field">
+            <label className="settings-field">
+              <span>{t(language, "resetTimeTimezone")}</span>
+              <select
+                value={draftPreferences.timeDisplay}
+                onChange={(event) => {
+                  setDraftPreferences((current) => ({
+                    ...current,
+                    timeDisplay: event.target.value as "utc" | "local",
+                  }));
+                }}
+              >
+                <option value="utc">UTC</option>
+                <option value="local">{t(language, "localTime")}</option>
+              </select>
+            </label>
+            <label className="settings-field">
               <span>{t(language, "timeDisplayFormat")}</span>
               <select
                 value={draftPreferences.timeFormat}

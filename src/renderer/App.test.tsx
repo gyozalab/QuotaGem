@@ -32,7 +32,7 @@ function createDashboardState(
     lastUpdatedLabel: "Updated just now",
     preferences: {
       preferredDisplayMode: "expanded",
-      providerVisibility: "both",
+      providerVisibility: { claude: true, codex: true, antigravity: true },
       refreshIntervalMinutes: 5,
       warningThreshold: 75,
       dangerThreshold: 90,
