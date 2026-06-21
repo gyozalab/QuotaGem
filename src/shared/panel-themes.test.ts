@@ -55,4 +55,23 @@ describe("panel themes", () => {
     expect(blossomTheme["--panel-pill-rgb"]).toBe("150, 128, 133");
     expect(blossomTheme["--metric-danger-end"]).toBe("#dea0a7");
   });
+
+  it("provides accessible ring and row colors for light themes and standard colors for dark themes", () => {
+    const charcoalTheme = getPanelThemeStyles("charcoal");
+    const linenTheme = getPanelThemeStyles("linen");
+
+    // Dark theme should use standard dark values
+    expect(charcoalTheme["--ring-normal"]).toBe("#3aa17e");
+    expect(charcoalTheme["--ring-warning"]).toBe("#e0a52e");
+    expect(charcoalTheme["--ring-danger"]).toBe("#e2574c");
+    expect(charcoalTheme["--row-normal"]).toBe("rgba(58, 161, 126, 0.28)");
+
+    // Light theme should use accessible light values (contrast enhanced)
+    expect(linenTheme["--ring-normal"]).toBe("#438564");
+    expect(linenTheme["--ring-warning"]).toBe("#a3792c");
+    expect(linenTheme["--ring-danger"]).toBe("#b85042");
+    expect(linenTheme["--row-normal"]).toBe("rgba(67, 133, 100, 0.16)");
+    expect(linenTheme["--row-warning"]).toBe("rgba(163, 121, 44, 0.16)");
+    expect(linenTheme["--row-danger"]).toBe("rgba(184, 80, 66, 0.16)");
+  });
 });

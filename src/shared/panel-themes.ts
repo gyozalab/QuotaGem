@@ -23,6 +23,26 @@ const SHARED_METRIC_COLORS = {
   "--metric-danger-end": "#dea0a7",
 } as const;
 
+const DARK_METRIC_COLORS = {
+  "--ring-normal": "#3aa17e",
+  "--ring-warning": "#e0a52e",
+  "--ring-danger": "#e2574c",
+  "--row-normal": "rgba(58, 161, 126, 0.28)",
+  "--row-warning": "rgba(224, 165, 46, 0.3)",
+  "--row-danger": "rgba(226, 87, 76, 0.32)",
+  "--row-danger-strong": "rgba(226, 87, 76, 0.42)",
+} as const;
+
+const LIGHT_METRIC_COLORS = {
+  "--ring-normal": "#438564",
+  "--ring-warning": "#a3792c",
+  "--ring-danger": "#b85042",
+  "--row-normal": "rgba(67, 133, 100, 0.16)",
+  "--row-warning": "rgba(163, 121, 44, 0.16)",
+  "--row-danger": "rgba(184, 80, 66, 0.16)",
+  "--row-danger-strong": "rgba(184, 80, 66, 0.26)",
+} as const;
+
 const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
   charcoal: {
     "--panel-color-scheme": "dark",
@@ -48,6 +68,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "217, 119, 87",
     "--panel-codex-rgb": "142, 152, 220",
     ...SHARED_METRIC_COLORS,
+    ...DARK_METRIC_COLORS,
   },
   slate: {
     "--panel-color-scheme": "dark",
@@ -73,6 +94,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "217, 119, 87",
     "--panel-codex-rgb": "142, 152, 220",
     ...SHARED_METRIC_COLORS,
+    ...DARK_METRIC_COLORS,
   },
   forest: {
     "--panel-color-scheme": "dark",
@@ -98,6 +120,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "217, 119, 87",
     "--panel-codex-rgb": "142, 152, 220",
     ...SHARED_METRIC_COLORS,
+    ...DARK_METRIC_COLORS,
   },
   ocean: {
     "--panel-color-scheme": "dark",
@@ -123,6 +146,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "217, 119, 87",
     "--panel-codex-rgb": "142, 152, 220",
     ...SHARED_METRIC_COLORS,
+    ...DARK_METRIC_COLORS,
   },
   mocha: {
     "--panel-color-scheme": "dark",
@@ -148,6 +172,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "217, 119, 87",
     "--panel-codex-rgb": "142, 152, 220",
     ...SHARED_METRIC_COLORS,
+    ...DARK_METRIC_COLORS,
   },
   linen: {
     "--panel-color-scheme": "light",
@@ -173,6 +198,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "184, 101, 72",
     "--panel-codex-rgb": "104, 116, 173",
     ...SHARED_METRIC_COLORS,
+    ...LIGHT_METRIC_COLORS,
   },
   mist: {
     "--panel-color-scheme": "light",
@@ -198,6 +224,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "184, 101, 72",
     "--panel-codex-rgb": "104, 116, 173",
     ...SHARED_METRIC_COLORS,
+    ...LIGHT_METRIC_COLORS,
   },
   sand: {
     "--panel-color-scheme": "light",
@@ -223,6 +250,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "184, 101, 72",
     "--panel-codex-rgb": "104, 116, 173",
     ...SHARED_METRIC_COLORS,
+    ...LIGHT_METRIC_COLORS,
   },
   blossom: {
     "--panel-color-scheme": "light",
@@ -248,6 +276,7 @@ const PANEL_THEME_STYLES: Record<PanelTone, PanelThemeStyles> = {
     "--panel-claude-rgb": "184, 101, 72",
     "--panel-codex-rgb": "111, 114, 176",
     ...SHARED_METRIC_COLORS,
+    ...LIGHT_METRIC_COLORS,
   },
 };
 
