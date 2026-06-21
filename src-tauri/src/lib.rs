@@ -31,14 +31,32 @@ async fn close_panels(app: tauri::AppHandle) -> Result<(), String> {
   windows::close_panels(&app).map_err(|error| error.to_string())
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExpandedLayoutPayload {
+  content_height: f64,
+  settings_open: bool,
+}
+
+#[tauri::command]
+async fn sync_expanded_layout(
+  app: tauri::AppHandle,
+  layout: ExpandedLayoutPayload,
+) -> Result<(), String> {
+  windows::sync_expanded_layout(&app, layout.content_height, layout.settings_open)
+    .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(windows::ExpandedWindowState::default())
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
       open_compact_panel,
       open_expanded_panel,
-      close_panels
+      close_panels,
+      sync_expanded_layout
     ])
     .on_window_event(|window, event| {
       if matches!(window.label(), "main" | "compact") {
