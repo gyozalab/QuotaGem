@@ -9,6 +9,19 @@ pub mod windows;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 
+/// 把回傳給前端的 preferences 的 launch_at_login 改成系統「實際」開機自啟狀態，
+/// 而非存檔值。對齊 1.0：開機自啟開關顯示真實 OS 狀態，不會在 enable() 失敗或
+/// 被外部工具改動後「說謊」。
+fn with_real_autostart(
+  app: &tauri::AppHandle,
+  mut prefs: models::WidgetPreferences,
+) -> models::WidgetPreferences {
+  if let Ok(enabled) = app.autolaunch().is_enabled() {
+    prefs.launch_at_login = enabled;
+  }
+  prefs
+}
+
 #[tauri::command]
 async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
   let store = models::load_settings();
@@ -19,7 +32,7 @@ async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateRe
   alerts::process_alerts(&app, &snapshots, &prefs);
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: prefs,
+    preferences: with_real_autostart(&app, prefs),
   })
 }
 
@@ -56,13 +69,19 @@ async fn save_settings(
 
   let _ = windows::update_window_geometries(&app, &store);
 
+  // 語言可能改變 → 即時重建托盤選單語言（對齊 1.0 save 時更新托盤）
+  tray::update_tray_language(
+    &app,
+    &store.language.clone().unwrap_or_else(|| "en".to_string()),
+  );
+
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
   let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
 
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: store.to_preferences(),
+    preferences: with_real_autostart(&app, store.to_preferences()),
   })
 }
 
@@ -117,7 +136,7 @@ async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateRespo
 
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: store.to_preferences(),
+    preferences: with_real_autostart(&app, store.to_preferences()),
   })
 }
 
@@ -192,6 +211,19 @@ pub fn run() {
       }
       windows::setup(app)?;
       tray::setup(app)?;
+
+      // 開機自啟：啟動時依儲存偏好重新套用到系統，修復外部改動造成的漂移
+      // （對齊 1.0 syncLaunchAtLoginPreference）。
+      {
+        let store = models::load_settings();
+        let autostart = app.handle().autolaunch();
+        if store.launch_at_login.unwrap_or(false) {
+          let _ = autostart.enable();
+        } else {
+          let _ = autostart.disable();
+        }
+      }
+
       refresh::start_auto_refresh(app.handle().clone());
       Ok(())
     })
