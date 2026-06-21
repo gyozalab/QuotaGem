@@ -143,6 +143,19 @@ const ipcAdapter = {
       }
     };
   },
+  onSettingsRequested: (callback: () => void) => {
+    let unlistenFn: (() => void) | null = null;
+
+    void listen<void>("settings:requested", () => {
+      callback();
+    }).then((unlisten) => {
+      unlistenFn = unlisten;
+    });
+
+    return () => {
+      unlistenFn?.();
+    };
+  },
 };
 
 // 掛載到 global window

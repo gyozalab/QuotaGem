@@ -105,9 +105,14 @@ function App() {
     const unsubscribe = window.trayUsageWidget.onRefreshRequested(() => {
       void loadState();
     });
+    const unsubscribeSettings = window.trayUsageWidget.onSettingsRequested(() => {
+      setSettingsNotice("");
+      setSettingsOpen(true);
+    });
 
     return () => {
       unsubscribe();
+      unsubscribeSettings();
     };
   }, []);
 

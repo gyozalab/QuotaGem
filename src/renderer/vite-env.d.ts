@@ -18,6 +18,7 @@ declare global {
         preferences: UsageDashboardState["preferences"],
       ) => Promise<UsageDashboardState>;
       onRefreshRequested: (callback: () => void) => () => void;
+      onSettingsRequested: (callback: () => void) => () => void;
     };
   }
 }

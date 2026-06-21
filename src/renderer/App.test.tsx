@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -52,8 +52,11 @@ function createDashboardState(
 }
 
 describe("App", () => {
+  let requestSettings: () => void;
+
   beforeEach(() => {
     const state = createDashboardState();
+    requestSettings = () => undefined;
 
     window.trayUsageWidget = {
       fetchUsageState: vi.fn().mockResolvedValue(state),
@@ -66,7 +69,20 @@ describe("App", () => {
         createDashboardState(preferences),
       ),
       onRefreshRequested: vi.fn().mockReturnValue(() => undefined),
+      onSettingsRequested: vi.fn().mockImplementation((callback) => {
+        requestSettings = callback;
+        return () => undefined;
+      }),
     };
+  });
+
+  it("opens settings when the tray menu requests it", async () => {
+    render(<App />);
+    await screen.findByText("Updated just now");
+
+    act(() => requestSettings());
+
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeVisible();
   });
 
   it("lets people toggle launch at login from settings and saves the preference", async () => {
