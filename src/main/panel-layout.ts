@@ -2,7 +2,7 @@ import { scalePanelDimension } from "../shared/panel-scale";
 
 const EXPANDED_BASE_SIZE = { width: 376, height: 500 };
 const COMPACT_BASE_SIZES = {
-  1: { width: 132, height: 150 },
+  1: { width: 200, height: 150 },
   2: { width: 212, height: 150 },
   3: { width: 296, height: 150 },
 } as const;

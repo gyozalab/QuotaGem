@@ -145,6 +145,9 @@ function App() {
     "--panel-scrollbar-thumb-alpha": String(scrollbarThumbOpacity),
     "--panel-scrollbar-thumb-hover-alpha": String(scrollbarThumbHoverOpacity),
     ...getPanelThemeStyles(visualPreferences.panelTone),
+    // 主題變數注入在這個 div（不是 :root），所以 color-scheme 也要在這裡宣告，
+    // 否則原生控制項（checkbox/select）會卡在 :root 的預設 dark，淺色主題下變黑框暗勾。
+    colorScheme: "var(--panel-color-scheme)",
   } as CSSProperties;
 
   useLayoutEffect(() => {

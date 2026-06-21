@@ -52,7 +52,7 @@ describe("getPanelSize", () => {
         expandedWindowHeight: 488,
         compactProviderCount: 1,
       }),
-    ).toEqual({ width: 132, height: 150 });
+    ).toEqual({ width: 200, height: 150 });
     // count > 3 clamps down to the three-provider footprint
     expect(
       getPanelSize({
@@ -70,6 +70,6 @@ describe("getPanelSize", () => {
         expandedWindowHeight: 488,
         compactProviderCount: 0,
       }),
-    ).toEqual({ width: 132, height: 150 });
+    ).toEqual({ width: 200, height: 150 });
   });
 });
