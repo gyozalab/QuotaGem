@@ -64,6 +64,7 @@ describe("App", () => {
       openExpandedPanel: vi.fn().mockResolvedValue(undefined),
       openCompactPanel: vi.fn().mockResolvedValue(undefined),
       closePanels: vi.fn().mockResolvedValue(undefined),
+      refreshUsage: vi.fn().mockResolvedValue(undefined),
       connectClaude: vi.fn().mockResolvedValue(state),
       saveSettings: vi.fn().mockImplementation(async (preferences) =>
         createDashboardState(preferences),

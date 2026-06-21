@@ -1,6 +1,7 @@
 pub mod models;
 pub mod provider;
 pub mod providers;
+pub mod refresh;
 pub mod tray;
 pub mod windows;
 
@@ -47,6 +48,11 @@ async fn sync_expanded_layout(
     .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+async fn refresh_usage(app: tauri::AppHandle) -> Result<(), String> {
+  windows::broadcast_refresh(&app).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -56,7 +62,8 @@ pub fn run() {
       open_compact_panel,
       open_expanded_panel,
       close_panels,
-      sync_expanded_layout
+      sync_expanded_layout,
+      refresh_usage
     ])
     .on_window_event(|window, event| {
       if matches!(window.label(), "main" | "compact") {
@@ -76,6 +83,7 @@ pub fn run() {
       }
       windows::setup(app)?;
       tray::setup(app)?;
+      refresh::start_auto_refresh(app.handle().clone());
       Ok(())
     })
     .run(tauri::generate_context!())

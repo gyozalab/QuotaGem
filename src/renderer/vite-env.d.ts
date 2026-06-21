@@ -13,6 +13,7 @@ declare global {
       openExpandedPanel: () => Promise<void>;
       openCompactPanel: () => Promise<void>;
       closePanels: () => Promise<void>;
+      refreshUsage: () => Promise<void>;
       connectClaude: () => Promise<UsageDashboardState>;
       saveSettings: (
         preferences: UsageDashboardState["preferences"],

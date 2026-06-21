@@ -328,6 +328,18 @@ pub fn sync_expanded_layout(
     position_expanded_window(&expanded, &settings, input)
 }
 
+/// 對目前可見的面板廣播刷新請求（隱藏的視窗不打擾），移植自 1.0 `broadcastRefresh`。
+pub fn broadcast_refresh(app: &AppHandle) -> tauri::Result<()> {
+    for label in [EXPANDED_WINDOW_LABEL, COMPACT_WINDOW_LABEL] {
+        if let Some(window) = app.get_webview_window(label) {
+            if window.is_visible().unwrap_or(false) {
+                window.emit("usage:refreshRequested", ())?;
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn close_panels(app: &AppHandle) -> tauri::Result<()> {
     if let Some(expanded) = app.get_webview_window(EXPANDED_WINDOW_LABEL) {
         expanded.hide()?;

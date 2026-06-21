@@ -195,7 +195,7 @@ function App() {
           language={visualPreferences.language}
           loading={loading}
           lastUpdatedLabel={dashboardState.lastUpdatedLabel}
-          onRefresh={() => void loadState()}
+          onRefresh={() => void window.trayUsageWidget.refreshUsage()}
           onOpenSettings={() => {
             setSettingsNotice("");
             setSettingsOpen((current) => !current);

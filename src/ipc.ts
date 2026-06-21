@@ -118,6 +118,9 @@ const ipcAdapter = {
   closePanels: async (): Promise<void> => {
     return invoke<void>("close_panels");
   },
+  refreshUsage: async (): Promise<void> => {
+    return invoke<void>("refresh_usage");
+  },
   connectClaude: async (): Promise<UsageDashboardState> => {
     return invoke<UsageDashboardState>("connect_claude");
   },
