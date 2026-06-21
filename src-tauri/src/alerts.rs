@@ -2,12 +2,16 @@
 //!
 //! - Task 6.1：超 warning/danger 閾值 → 發 Windows 通知（`tauri-plugin-notification`）。
 //! - Task 6.2：通知等級過濾——"all" 通知 warning+danger，"danger" 只通知 danger。
-//! 跨刷新去重（6.3）後續任務再疊加。
+//! - Task 6.3：跨刷新去重——rank-based，同 key 只在等級升高時通知；降回後再次跨越可再通知。
+//!   priming：首次 consume 填充 `seen_levels` 但不發通知（對應 1.0 `usageAlertsPrimed`，
+//!   避免啟動時對既有高用量灌一波通知）。`health == Unavailable` 的 provider 整個跳過。
+
+use std::collections::HashMap;
 
 use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 
-use crate::models::{ProviderHealth, UsageSnapshot, WidgetPreferences};
+use crate::models::{ProviderHealth, ProviderId, UsageSnapshot, WidgetPreferences};
 
 // ── Alert level（對應 1.0 `UsageAlertLevel`）──
 
@@ -28,6 +32,15 @@ fn get_alert_level(percent: f64, warning_threshold: u32, danger_threshold: u32) 
     }
 }
 
+/// 等級排名，供跨刷新去重比較（對應 1.0 `getAlertRank`）。
+fn get_alert_rank(level: AlertLevel) -> u8 {
+    match level {
+        AlertLevel::None => 0,
+        AlertLevel::Warning => 1,
+        AlertLevel::Danger => 2,
+    }
+}
+
 /// 通知等級過濾（對應 1.0 `shouldNotifyForLevel`）：
 /// "danger" 只放行 Danger；其餘（"all"）放行 Warning + Danger。
 fn should_notify_for_level(notification_level: &str, level: AlertLevel) -> bool {
@@ -35,6 +48,14 @@ fn should_notify_for_level(notification_level: &str, level: AlertLevel) -> bool 
         level == AlertLevel::Danger
     } else {
         true
+    }
+}
+
+fn provider_id_str(id: &ProviderId) -> &'static str {
+    match id {
+        ProviderId::Claude => "claude",
+        ProviderId::Codex => "codex",
+        ProviderId::Antigravity => "antigravity",
     }
 }
 
@@ -103,20 +124,29 @@ fn build_alert(
 
 // ── Alert tracker（對應 1.0 `createUsageAlertTracker`）──
 
-pub struct AlertTracker;
+pub struct AlertTracker {
+    seen_levels: HashMap<String, AlertLevel>,
+    primed: bool,
+}
 
 impl AlertTracker {
     pub fn new() -> Self {
-        Self
+        Self {
+            seen_levels: HashMap::new(),
+            primed: false,
+        }
     }
 
     /// 消費快照，回傳需發送的通知清單。
     ///
-    /// - 6.1：對每個超過 warning/danger 閾值的 session/weekly 軌道發通知。
+    /// - 6.1：超過 warning/danger 閾值的 session/weekly 軌道發通知。
     /// - 6.2：`notification_level` 過濾（"all" / "danger"）。
-    /// `health == Unavailable` 的 provider 整個跳過（避免暫時性 fetch 失敗誤觸）。
+    /// - 6.3：rank-based 去重，只在等級升高時通知；降回 None 後再升又可通知。
+    ///   首次 consume 為 priming：填充 `seen_levels` 但回傳空清單。
+    /// `health == Unavailable` 的 provider 整個跳過（不更新 `seen_levels`，
+    /// 避免暫時性失敗歸零後誤觸）。
     pub fn consume(
-        &self,
+        &mut self,
         snapshots: &[UsageSnapshot],
         warning_threshold: u32,
         danger_threshold: u32,
@@ -125,15 +155,12 @@ impl AlertTracker {
     ) -> Vec<AlertNotification> {
         let mut alerts = Vec::new();
 
-        if !notifications_enabled {
-            return alerts;
-        }
-
         for snapshot in snapshots {
             if snapshot.health.as_ref() == Some(&ProviderHealth::Unavailable) {
                 continue;
             }
 
+            let provider_str = provider_id_str(&snapshot.provider);
             let display_name = &snapshot.display_name;
 
             for scope in &build_scopes(snapshot) {
@@ -141,14 +168,37 @@ impl AlertTracker {
                     ("session", scope.session_percent),
                     ("weekly", scope.weekly_percent),
                 ] {
-                    let level = get_alert_level(percent, warning_threshold, danger_threshold);
-                    if level != AlertLevel::None
-                        && should_notify_for_level(notification_level, level)
+                    let alert_id = match &scope.group_label {
+                        Some(label) => format!("{provider_str}:{label}:{metric}"),
+                        None => format!("{provider_str}:{metric}"),
+                    };
+
+                    let next_level =
+                        get_alert_level(percent, warning_threshold, danger_threshold);
+                    let previous_level = self
+                        .seen_levels
+                        .get(&alert_id)
+                        .copied()
+                        .unwrap_or(AlertLevel::None);
+
+                    if notifications_enabled
+                        && next_level != AlertLevel::None
+                        && should_notify_for_level(notification_level, next_level)
+                        && get_alert_rank(next_level) > get_alert_rank(previous_level)
                     {
-                        alerts.push(build_alert(display_name, scope, metric, percent, level));
+                        alerts.push(build_alert(display_name, scope, metric, percent, next_level));
                     }
+
+                    // 無論是否通知都更新 seen_levels（rank 去重的記憶）
+                    self.seen_levels.insert(alert_id, next_level);
                 }
             }
+        }
+
+        // priming：首次 consume 填充 seen_levels 但不發通知
+        if !self.primed {
+            self.primed = true;
+            return Vec::new();
         }
 
         alerts
@@ -161,7 +211,7 @@ impl AlertTracker {
 /// 對每個 alert 用 `tauri-plugin-notification` 發送 Windows 通知。
 pub fn process_alerts(app: &AppHandle, snapshots: &[UsageSnapshot], prefs: &WidgetPreferences) {
     let tracker_state = app.state::<std::sync::Mutex<AlertTracker>>();
-    let tracker = match tracker_state.lock() {
+    let mut tracker = match tracker_state.lock() {
         Ok(t) => t,
         Err(_) => return,
     };
@@ -241,17 +291,25 @@ mod tests {
 
     #[test]
     fn normal_usage_produces_no_alerts() {
-        let tracker = AlertTracker::new();
+        let mut tracker = AlertTracker::new();
         let snapshots = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
 
+        // First consume = priming
+        assert!(tracker.consume(&snapshots, 75, 90, true, "all").is_empty());
+        // Still normal
         assert!(tracker.consume(&snapshots, 75, 90, true, "all").is_empty());
     }
 
     #[test]
     fn warning_threshold_triggers_alert() {
-        let tracker = AlertTracker::new();
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
 
+        // Priming with normal baseline
+        tracker.consume(&normal, 75, 90, true, "all");
+
+        // Cross warning threshold
         let alerts = tracker.consume(&warning, 75, 90, true, "all");
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].body.contains("⚠️"));
@@ -262,8 +320,11 @@ mod tests {
 
     #[test]
     fn danger_threshold_triggers_alert() {
-        let tracker = AlertTracker::new();
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Codex, "Codex", 50.0, 30.0)];
         let danger = vec![make_snapshot(ProviderId::Codex, "Codex", 95.0, 30.0)];
+
+        tracker.consume(&normal, 75, 90, true, "all");
 
         let alerts = tracker.consume(&danger, 75, 90, true, "all");
         assert_eq!(alerts.len(), 1);
@@ -272,17 +333,120 @@ mod tests {
     }
 
     #[test]
+    fn same_level_does_not_retrigger() {
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+
+        // Priming with normal baseline (below threshold)
+        tracker.consume(&normal, 75, 90, true, "all");
+
+        // First crossing into warning fires
+        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        assert_eq!(alerts.len(), 1);
+
+        // Same level again (still warning): no alert
+        let still_warning = vec![make_snapshot(ProviderId::Claude, "Claude", 82.0, 30.0)];
+        let alerts = tracker.consume(&still_warning, 75, 90, true, "all");
+        assert!(alerts.is_empty());
+    }
+
+    #[test]
+    fn fallback_to_none_then_retrigger() {
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 20.0, 30.0)];
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+
+        // Priming with normal baseline (below threshold)
+        tracker.consume(&normal, 75, 90, true, "all");
+
+        // Cross into warning → fires
+        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        assert_eq!(alerts.len(), 1);
+
+        // Fall back to none
+        let alerts = tracker.consume(&normal, 75, 90, true, "all");
+        assert!(alerts.is_empty());
+
+        // Rise again → retrigger
+        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        assert_eq!(alerts.len(), 1);
+    }
+
+    #[test]
+    fn danger_only_filters_warning() {
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+        let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
+
+        tracker.consume(&normal, 75, 90, true, "danger");
+
+        // Warning level → 被 "danger" 模式過濾掉
+        let alerts = tracker.consume(&warning, 75, 90, true, "danger");
+        assert!(alerts.is_empty());
+
+        // Danger level → 通過過濾
+        let alerts = tracker.consume(&danger, 75, 90, true, "danger");
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].body.contains("⛔"));
+    }
+
+    #[test]
     fn notifications_disabled_produces_no_alerts() {
-        let tracker = AlertTracker::new();
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+        let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
+
+        tracker.consume(&normal, 75, 90, false, "all");
+
+        let alerts = tracker.consume(&danger, 75, 90, false, "all");
+        assert!(alerts.is_empty());
+    }
+
+    #[test]
+    fn priming_suppresses_first_alerts() {
+        let mut tracker = AlertTracker::new();
+        // First consume with already-over-threshold data
         let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 95.0)];
 
-        assert!(tracker.consume(&danger, 75, 90, false, "all").is_empty());
+        // Priming: empty even though thresholds exceeded
+        assert!(tracker.consume(&danger, 75, 90, true, "all").is_empty());
+
+        // Same data again: no rank change → no alert
+        assert!(tracker.consume(&danger, 75, 90, true, "all").is_empty());
+    }
+
+    #[test]
+    fn unavailable_provider_is_skipped() {
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+
+        tracker.consume(&normal, 75, 90, true, "all");
+
+        // Provider goes unavailable — don't update seen_levels
+        let mut unavailable = make_snapshot(ProviderId::Claude, "Claude", 0.0, 0.0);
+        unavailable.health = Some(ProviderHealth::Unavailable);
+        tracker.consume(&[unavailable], 75, 90, true, "all");
+
+        // Provider comes back with warning → should trigger (seen stayed at none baseline)
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        assert_eq!(alerts.len(), 1);
     }
 
     #[test]
     fn group_aware_alerts() {
-        let tracker = AlertTracker::new();
-        // 只有一個群組越過閾值
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_grouped_snapshot(
+            ProviderId::Antigravity,
+            "Antigravity",
+            vec![("Gemini Models", 50.0, 30.0), ("Gemini Code", 50.0, 30.0)],
+        )];
+
+        tracker.consume(&normal, 75, 90, true, "all");
+
+        // Only one group crosses threshold
         let mixed = vec![make_grouped_snapshot(
             ProviderId::Antigravity,
             "Antigravity",
@@ -293,20 +457,5 @@ mod tests {
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].body.contains("Antigravity · Gemini Models"));
         assert!(alerts[0].body.contains("Session"));
-    }
-
-    #[test]
-    fn danger_only_filters_warning() {
-        let tracker = AlertTracker::new();
-        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
-        let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
-
-        // Warning level → 被 "danger" 模式過濾掉
-        assert!(tracker.consume(&warning, 75, 90, true, "danger").is_empty());
-
-        // Danger level → 通過過濾
-        let alerts = tracker.consume(&danger, 75, 90, true, "danger");
-        assert_eq!(alerts.len(), 1);
-        assert!(alerts[0].body.contains("⛔"));
     }
 }
