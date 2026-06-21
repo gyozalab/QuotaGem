@@ -1,7 +1,8 @@
 //! 配額閾值警示（移植自 1.0 `src/main/usage-alerts.ts`）
 //!
-//! Task 6.1：超 warning/danger 閾值 → 發 Windows 通知（`tauri-plugin-notification`）。
-//! 本階段只做「偵測 + 發通知」；通知等級過濾（6.2）與跨刷新去重（6.3）後續任務再疊加。
+//! - Task 6.1：超 warning/danger 閾值 → 發 Windows 通知（`tauri-plugin-notification`）。
+//! - Task 6.2：通知等級過濾——"all" 通知 warning+danger，"danger" 只通知 danger。
+//! 跨刷新去重（6.3）後續任務再疊加。
 
 use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
@@ -24,6 +25,16 @@ fn get_alert_level(percent: f64, warning_threshold: u32, danger_threshold: u32) 
         AlertLevel::Warning
     } else {
         AlertLevel::None
+    }
+}
+
+/// 通知等級過濾（對應 1.0 `shouldNotifyForLevel`）：
+/// "danger" 只放行 Danger；其餘（"all"）放行 Warning + Danger。
+fn should_notify_for_level(notification_level: &str, level: AlertLevel) -> bool {
+    if notification_level == "danger" {
+        level == AlertLevel::Danger
+    } else {
+        true
     }
 }
 
@@ -101,7 +112,8 @@ impl AlertTracker {
 
     /// 消費快照，回傳需發送的通知清單。
     ///
-    /// 本階段（6.1）：對每個超過 warning/danger 閾值的 session/weekly 軌道發通知。
+    /// - 6.1：對每個超過 warning/danger 閾值的 session/weekly 軌道發通知。
+    /// - 6.2：`notification_level` 過濾（"all" / "danger"）。
     /// `health == Unavailable` 的 provider 整個跳過（避免暫時性 fetch 失敗誤觸）。
     pub fn consume(
         &self,
@@ -109,6 +121,7 @@ impl AlertTracker {
         warning_threshold: u32,
         danger_threshold: u32,
         notifications_enabled: bool,
+        notification_level: &str,
     ) -> Vec<AlertNotification> {
         let mut alerts = Vec::new();
 
@@ -129,7 +142,9 @@ impl AlertTracker {
                     ("weekly", scope.weekly_percent),
                 ] {
                     let level = get_alert_level(percent, warning_threshold, danger_threshold);
-                    if level != AlertLevel::None {
+                    if level != AlertLevel::None
+                        && should_notify_for_level(notification_level, level)
+                    {
                         alerts.push(build_alert(display_name, scope, metric, percent, level));
                     }
                 }
@@ -156,6 +171,7 @@ pub fn process_alerts(app: &AppHandle, snapshots: &[UsageSnapshot], prefs: &Widg
         prefs.warning_threshold,
         prefs.danger_threshold,
         prefs.notifications_enabled,
+        &prefs.notification_level,
     );
 
     for alert in alerts {
@@ -228,7 +244,7 @@ mod tests {
         let tracker = AlertTracker::new();
         let snapshots = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
 
-        assert!(tracker.consume(&snapshots, 75, 90, true).is_empty());
+        assert!(tracker.consume(&snapshots, 75, 90, true, "all").is_empty());
     }
 
     #[test]
@@ -236,7 +252,7 @@ mod tests {
         let tracker = AlertTracker::new();
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
 
-        let alerts = tracker.consume(&warning, 75, 90, true);
+        let alerts = tracker.consume(&warning, 75, 90, true, "all");
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].body.contains("⚠️"));
         assert!(alerts[0].body.contains("Claude"));
@@ -249,7 +265,7 @@ mod tests {
         let tracker = AlertTracker::new();
         let danger = vec![make_snapshot(ProviderId::Codex, "Codex", 95.0, 30.0)];
 
-        let alerts = tracker.consume(&danger, 75, 90, true);
+        let alerts = tracker.consume(&danger, 75, 90, true, "all");
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].body.contains("⛔"));
         assert!(alerts[0].body.contains("Codex"));
@@ -260,7 +276,7 @@ mod tests {
         let tracker = AlertTracker::new();
         let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 95.0)];
 
-        assert!(tracker.consume(&danger, 75, 90, false).is_empty());
+        assert!(tracker.consume(&danger, 75, 90, false, "all").is_empty());
     }
 
     #[test]
@@ -273,9 +289,24 @@ mod tests {
             vec![("Gemini Models", 85.0, 30.0), ("Gemini Code", 50.0, 30.0)],
         )];
 
-        let alerts = tracker.consume(&mixed, 75, 90, true);
+        let alerts = tracker.consume(&mixed, 75, 90, true, "all");
         assert_eq!(alerts.len(), 1);
         assert!(alerts[0].body.contains("Antigravity · Gemini Models"));
         assert!(alerts[0].body.contains("Session"));
+    }
+
+    #[test]
+    fn danger_only_filters_warning() {
+        let tracker = AlertTracker::new();
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+        let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
+
+        // Warning level → 被 "danger" 模式過濾掉
+        assert!(tracker.consume(&warning, 75, 90, true, "danger").is_empty());
+
+        // Danger level → 通過過濾
+        let alerts = tracker.consume(&danger, 75, 90, true, "danger");
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].body.contains("⛔"));
     }
 }
