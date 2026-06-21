@@ -12,13 +12,18 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "QuotaGem",
-        "width": 800,
-        "height": 600,
+        "width": 376,
+        "height": 680,
         "visible": false,
         "skipTaskbar": true,
-        "resizable": true,
-        "fullscreen": false
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "shadow": false
       }
     ],
     "security": {
