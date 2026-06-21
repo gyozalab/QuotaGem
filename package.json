@@ -34,7 +34,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/quota-gem-app-icon.png"
@@ -61,6 +63,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
     "electron-store": "^11.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
