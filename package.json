@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
+    "tauri": "tauri",
     "package": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --x64"
   },
   "build": {
@@ -69,6 +70,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
