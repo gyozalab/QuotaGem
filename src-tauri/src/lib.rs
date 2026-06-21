@@ -6,6 +6,7 @@ pub mod tray;
 pub mod windows;
 
 use tauri::Manager;
+use tauri_plugin_autostart::ManagerExt;
 
 #[tauri::command]
 async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
@@ -42,6 +43,13 @@ async fn save_settings(
   store.panel_tone = Some(preferences.panel_tone);
 
   models::save_settings(&store).map_err(|e| e.to_string())?;
+
+  let autostart = app.autolaunch();
+  if preferences.launch_at_login {
+    let _ = autostart.enable();
+  } else {
+    let _ = autostart.disable();
+  }
 
   let _ = windows::update_window_geometries(&app, &store);
 
@@ -149,6 +157,7 @@ async fn refresh_usage(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_autostart::Builder::default().build())
     .manage(windows::ExpandedWindowState::default())
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
