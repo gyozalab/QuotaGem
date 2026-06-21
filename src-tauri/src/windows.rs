@@ -369,6 +369,25 @@ pub fn toggle_preferred_panel(app: &AppHandle) -> tauri::Result<()> {
     }
 }
 
+pub fn update_window_geometries(app: &AppHandle, settings: &AppStore) -> tauri::Result<()> {
+    if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {
+        if compact.is_visible().unwrap_or(false) {
+            position_compact_window(&compact, settings)?;
+        }
+    }
+    if let Some(expanded) = app.get_webview_window(EXPANDED_WINDOW_LABEL) {
+        if expanded.is_visible().unwrap_or(false) {
+            let input = *app
+                .state::<ExpandedWindowState>()
+                .inner
+                .lock()
+                .expect("expanded window state poisoned");
+            position_expanded_window(&expanded, settings, input)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
