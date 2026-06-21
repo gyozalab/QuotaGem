@@ -8,23 +8,9 @@ const SETTINGS_MENU_ID: &str = "settings";
 const QUIT_MENU_ID: &str = "quit";
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum PanelAction {
-    Show,
-    Hide,
-}
-
-#[derive(Debug, PartialEq, Eq)]
 pub enum MenuAction {
     OpenSettings,
     Quit,
-}
-
-pub fn panel_action(is_visible: bool) -> PanelAction {
-    if is_visible {
-        PanelAction::Hide
-    } else {
-        PanelAction::Show
-    }
 }
 
 pub fn menu_action(id: &str) -> Option<MenuAction> {
@@ -48,9 +34,8 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match menu_action(event.id().as_ref()) {
             Some(MenuAction::OpenSettings) => {
+                let _ = crate::windows::show_expanded_panel(app);
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
                     let _ = window.emit("settings:requested", ());
                 }
             }
@@ -64,17 +49,7 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    match panel_action(window.is_visible().unwrap_or(false)) {
-                        PanelAction::Show => {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                        PanelAction::Hide => {
-                            let _ = window.hide();
-                        }
-                    }
-                }
+                let _ = crate::windows::toggle_preferred_panel(tray.app_handle());
             }
         });
 
@@ -88,17 +63,7 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{menu_action, panel_action, MenuAction, PanelAction};
-
-    #[test]
-    fn left_click_shows_a_hidden_panel() {
-        assert_eq!(panel_action(false), PanelAction::Show);
-    }
-
-    #[test]
-    fn left_click_hides_a_visible_panel() {
-        assert_eq!(panel_action(true), PanelAction::Hide);
-    }
+    use super::{menu_action, MenuAction};
 
     #[test]
     fn tray_menu_ids_map_to_settings_and_quit_actions() {

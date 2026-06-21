@@ -131,9 +131,7 @@ pub fn coerce_provider_visibility(val: &Option<serde_json::Value>) -> ProviderVi
                     claude = false;
                     antigravity = false;
                 }
-                "both" => {
-                    antigravity = false;
-                }
+                "both" => {}
                 _ => {}
             }
         } else if let Some(obj) = v.as_object() {
@@ -188,6 +186,20 @@ impl AppStore {
             panel_opacity: self.panel_opacity.unwrap_or(90.0),
             panel_tone: self.panel_tone.clone().unwrap_or_else(|| "charcoal".to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::coerce_provider_visibility;
+
+    #[test]
+    fn legacy_both_visibility_enables_all_three_providers() {
+        let visibility = coerce_provider_visibility(&Some(serde_json::json!("both")));
+
+        assert!(visibility.claude);
+        assert!(visibility.codex);
+        assert!(visibility.antigravity);
     }
 }
 

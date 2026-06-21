@@ -2,6 +2,7 @@ pub mod models;
 pub mod provider;
 pub mod providers;
 pub mod tray;
+pub mod windows;
 
 #[tauri::command]
 async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
@@ -15,12 +16,32 @@ async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
   })
 }
 
+#[tauri::command]
+async fn open_compact_panel(app: tauri::AppHandle) -> Result<(), String> {
+  windows::show_compact_panel(&app).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn open_expanded_panel(app: tauri::AppHandle) -> Result<(), String> {
+  windows::show_expanded_panel(&app).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn close_panels(app: tauri::AppHandle) -> Result<(), String> {
+  windows::close_panels(&app).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![fetch_usage_state])
+    .invoke_handler(tauri::generate_handler![
+      fetch_usage_state,
+      open_compact_panel,
+      open_expanded_panel,
+      close_panels
+    ])
     .on_window_event(|window, event| {
-      if window.label() == "main" {
+      if matches!(window.label(), "main" | "compact") {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
           api.prevent_close();
           let _ = window.hide();
@@ -35,6 +56,7 @@ pub fn run() {
             .build(),
         )?;
       }
+      windows::setup(app)?;
       tray::setup(app)?;
       Ok(())
     })
