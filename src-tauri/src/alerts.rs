@@ -5,6 +5,12 @@
 //! - Task 6.3：跨刷新去重——rank-based，同 key 只在等級升高時通知；降回後再次跨越可再通知。
 //!   priming：首次 consume 填充 `seen_levels` 但不發通知（對應 1.0 `usageAlertsPrimed`，
 //!   避免啟動時對既有高用量灌一波通知）。`health == Unavailable` 的 provider 整個跳過。
+//!
+//! 通知文案與 1.0 一致（含中英 i18n，無 emoji）：
+//! - 標題：`QuotaGem`
+//! - 內文 en：`{provider} {metric} usage reached {percent}%.`
+//! - 內文 zh-TW：`{provider} 的 {metric} 用量已達 {percent}%。`
+//! - metric 標籤：session→Session/每五小時，weekly→Weekly/每週（對應 1.0 i18n key）。
 
 use std::collections::HashMap;
 
@@ -98,27 +104,46 @@ fn build_scopes(snapshot: &UsageSnapshot) -> Vec<AlertScope> {
     }]
 }
 
-/// 組裝單一警示通知的標題與內文。
+/// session/weekly 軌道的在地化標籤（對應 1.0 i18n key `session` / `weekly`）。
+fn metric_label(language: &str, metric: &str) -> &'static str {
+    let is_session = metric == "session";
+    if language == "zh-TW" {
+        if is_session {
+            "每五小時"
+        } else {
+            "每週"
+        }
+    } else if is_session {
+        "Session"
+    } else {
+        "Weekly"
+    }
+}
+
+/// 組裝單一警示通知的標題與內文，文案與 1.0 `buildUsageAlertNotification` 一致。
 fn build_alert(
+    language: &str,
     display_name: &str,
     scope: &AlertScope,
     metric: &str,
     percent: f64,
-    level: AlertLevel,
 ) -> AlertNotification {
-    let provider_label = match &scope.group_label {
+    let provider = match &scope.group_label {
         Some(label) => format!("{display_name} · {label}"),
         None => display_name.to_string(),
     };
-    let metric_label = if metric == "session" { "Session" } else { "Weekly" };
-    let emoji = if level == AlertLevel::Danger { "⛔" } else { "⚠️" };
+    let metric = metric_label(language, metric);
+    let percent = percent.round() as i64;
+
+    let body = if language == "zh-TW" {
+        format!("{provider} 的 {metric} 用量已達 {percent}%。")
+    } else {
+        format!("{provider} {metric} usage reached {percent}%.")
+    };
 
     AlertNotification {
         title: "QuotaGem".to_string(),
-        body: format!(
-            "{emoji} {provider_label} — {metric_label} {percent}%",
-            percent = percent.round() as i64,
-        ),
+        body,
     }
 }
 
@@ -152,6 +177,7 @@ impl AlertTracker {
         danger_threshold: u32,
         notifications_enabled: bool,
         notification_level: &str,
+        language: &str,
     ) -> Vec<AlertNotification> {
         let mut alerts = Vec::new();
 
@@ -186,7 +212,7 @@ impl AlertTracker {
                         && should_notify_for_level(notification_level, next_level)
                         && get_alert_rank(next_level) > get_alert_rank(previous_level)
                     {
-                        alerts.push(build_alert(display_name, scope, metric, percent, next_level));
+                        alerts.push(build_alert(language, display_name, scope, metric, percent));
                     }
 
                     // 無論是否通知都更新 seen_levels（rank 去重的記憶）
@@ -222,6 +248,7 @@ pub fn process_alerts(app: &AppHandle, snapshots: &[UsageSnapshot], prefs: &Widg
         prefs.danger_threshold,
         prefs.notifications_enabled,
         &prefs.notification_level,
+        &prefs.language,
     );
 
     for alert in alerts {
@@ -295,9 +322,9 @@ mod tests {
         let snapshots = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
 
         // First consume = priming
-        assert!(tracker.consume(&snapshots, 75, 90, true, "all").is_empty());
+        assert!(tracker.consume(&snapshots, 75, 90, true, "all", "en").is_empty());
         // Still normal
-        assert!(tracker.consume(&snapshots, 75, 90, true, "all").is_empty());
+        assert!(tracker.consume(&snapshots, 75, 90, true, "all", "en").is_empty());
     }
 
     #[test]
@@ -307,15 +334,13 @@ mod tests {
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
 
         // Priming with normal baseline
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
         // Cross warning threshold
-        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
-        assert!(alerts[0].body.contains("⚠️"));
-        assert!(alerts[0].body.contains("Claude"));
-        assert!(alerts[0].body.contains("Session"));
-        assert!(alerts[0].body.contains("80%"));
+        assert_eq!(alerts[0].title, "QuotaGem");
+        assert_eq!(alerts[0].body, "Claude Session usage reached 80%.");
     }
 
     #[test]
@@ -324,12 +349,11 @@ mod tests {
         let normal = vec![make_snapshot(ProviderId::Codex, "Codex", 50.0, 30.0)];
         let danger = vec![make_snapshot(ProviderId::Codex, "Codex", 95.0, 30.0)];
 
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
-        let alerts = tracker.consume(&danger, 75, 90, true, "all");
+        let alerts = tracker.consume(&danger, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
-        assert!(alerts[0].body.contains("⛔"));
-        assert!(alerts[0].body.contains("Codex"));
+        assert_eq!(alerts[0].body, "Codex Session usage reached 95%.");
     }
 
     #[test]
@@ -339,15 +363,15 @@ mod tests {
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
 
         // Priming with normal baseline (below threshold)
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
         // First crossing into warning fires
-        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
 
         // Same level again (still warning): no alert
         let still_warning = vec![make_snapshot(ProviderId::Claude, "Claude", 82.0, 30.0)];
-        let alerts = tracker.consume(&still_warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&still_warning, 75, 90, true, "all", "en");
         assert!(alerts.is_empty());
     }
 
@@ -358,18 +382,18 @@ mod tests {
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
 
         // Priming with normal baseline (below threshold)
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
         // Cross into warning → fires
-        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
 
         // Fall back to none
-        let alerts = tracker.consume(&normal, 75, 90, true, "all");
+        let alerts = tracker.consume(&normal, 75, 90, true, "all", "en");
         assert!(alerts.is_empty());
 
         // Rise again → retrigger
-        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
     }
 
@@ -380,16 +404,16 @@ mod tests {
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
         let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
 
-        tracker.consume(&normal, 75, 90, true, "danger");
+        tracker.consume(&normal, 75, 90, true, "danger", "en");
 
         // Warning level → 被 "danger" 模式過濾掉
-        let alerts = tracker.consume(&warning, 75, 90, true, "danger");
+        let alerts = tracker.consume(&warning, 75, 90, true, "danger", "en");
         assert!(alerts.is_empty());
 
         // Danger level → 通過過濾
-        let alerts = tracker.consume(&danger, 75, 90, true, "danger");
+        let alerts = tracker.consume(&danger, 75, 90, true, "danger", "en");
         assert_eq!(alerts.len(), 1);
-        assert!(alerts[0].body.contains("⛔"));
+        assert_eq!(alerts[0].body, "Claude Session usage reached 95%.");
     }
 
     #[test]
@@ -398,9 +422,9 @@ mod tests {
         let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
         let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 30.0)];
 
-        tracker.consume(&normal, 75, 90, false, "all");
+        tracker.consume(&normal, 75, 90, false, "all", "en");
 
-        let alerts = tracker.consume(&danger, 75, 90, false, "all");
+        let alerts = tracker.consume(&danger, 75, 90, false, "all", "en");
         assert!(alerts.is_empty());
     }
 
@@ -411,10 +435,10 @@ mod tests {
         let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 95.0)];
 
         // Priming: empty even though thresholds exceeded
-        assert!(tracker.consume(&danger, 75, 90, true, "all").is_empty());
+        assert!(tracker.consume(&danger, 75, 90, true, "all", "en").is_empty());
 
         // Same data again: no rank change → no alert
-        assert!(tracker.consume(&danger, 75, 90, true, "all").is_empty());
+        assert!(tracker.consume(&danger, 75, 90, true, "all", "en").is_empty());
     }
 
     #[test]
@@ -422,16 +446,16 @@ mod tests {
         let mut tracker = AlertTracker::new();
         let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
 
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
         // Provider goes unavailable — don't update seen_levels
         let mut unavailable = make_snapshot(ProviderId::Claude, "Claude", 0.0, 0.0);
         unavailable.health = Some(ProviderHealth::Unavailable);
-        tracker.consume(&[unavailable], 75, 90, true, "all");
+        tracker.consume(&[unavailable], 75, 90, true, "all", "en");
 
         // Provider comes back with warning → should trigger (seen stayed at none baseline)
         let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
-        let alerts = tracker.consume(&warning, 75, 90, true, "all");
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
     }
 
@@ -444,7 +468,7 @@ mod tests {
             vec![("Gemini Models", 50.0, 30.0), ("Gemini Code", 50.0, 30.0)],
         )];
 
-        tracker.consume(&normal, 75, 90, true, "all");
+        tracker.consume(&normal, 75, 90, true, "all", "en");
 
         // Only one group crosses threshold
         let mixed = vec![make_grouped_snapshot(
@@ -453,9 +477,25 @@ mod tests {
             vec![("Gemini Models", 85.0, 30.0), ("Gemini Code", 50.0, 30.0)],
         )];
 
-        let alerts = tracker.consume(&mixed, 75, 90, true, "all");
+        let alerts = tracker.consume(&mixed, 75, 90, true, "all", "en");
         assert_eq!(alerts.len(), 1);
-        assert!(alerts[0].body.contains("Antigravity · Gemini Models"));
-        assert!(alerts[0].body.contains("Session"));
+        assert_eq!(
+            alerts[0].body,
+            "Antigravity · Gemini Models Session usage reached 85%."
+        );
+    }
+
+    #[test]
+    fn localized_alert_body_zh_tw() {
+        let mut tracker = AlertTracker::new();
+        let normal = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+
+        tracker.consume(&normal, 75, 90, true, "all", "zh-TW");
+
+        let alerts = tracker.consume(&warning, 75, 90, true, "all", "zh-TW");
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0].title, "QuotaGem");
+        assert_eq!(alerts[0].body, "Claude 的 每五小時 用量已達 80%。");
     }
 }
