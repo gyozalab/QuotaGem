@@ -230,6 +230,51 @@ describe("App", () => {
     });
   });
 
+  it("lets people choose a language from settings and saves the preference", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    const languageSelect = await screen.findByLabelText("Language");
+
+    await userEvent.selectOptions(languageSelect, "zh-TW");
+    await userEvent.click(screen.getByRole("button", { name: "儲存設定" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          language: "zh-TW",
+        }),
+      );
+    });
+  });
+
+  it("lets people choose a time display and format from settings", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    const timeDisplay = await screen.findByLabelText("Reset time timezone");
+    const timeFormat = await screen.findByLabelText("Time display format");
+
+    await userEvent.selectOptions(timeDisplay, "local");
+    await userEvent.selectOptions(timeFormat, "12h");
+    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timeDisplay: "local",
+          timeFormat: "12h",
+        }),
+      );
+    });
+  });
+
   it("derives control opacity tokens from the panel transparency preference", async () => {
     const state = createDashboardState({
       panelOpacity: 76,
