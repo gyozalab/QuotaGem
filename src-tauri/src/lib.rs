@@ -3,9 +3,15 @@ pub mod provider;
 pub mod providers;
 
 #[tauri::command]
-async fn fetch_usage_state() -> Result<Vec<models::UsageSnapshot>, String> {
-  let snapshots = providers::get_all_snapshots(None, None).await;
-  Ok(snapshots)
+async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
+  let store = models::load_settings();
+  let claude_key = store.claude_session_key.clone();
+  let claude_org = store.claude_organization_id.clone();
+  let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  Ok(models::UsageStateResponse {
+    snapshots,
+    preferences: store.to_preferences(),
+  })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
