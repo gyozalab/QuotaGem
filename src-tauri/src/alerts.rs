@@ -1,0 +1,281 @@
+//! 配額閾值警示（移植自 1.0 `src/main/usage-alerts.ts`）
+//!
+//! Task 6.1：超 warning/danger 閾值 → 發 Windows 通知（`tauri-plugin-notification`）。
+//! 本階段只做「偵測 + 發通知」；通知等級過濾（6.2）與跨刷新去重（6.3）後續任務再疊加。
+
+use tauri::{AppHandle, Manager};
+use tauri_plugin_notification::NotificationExt;
+
+use crate::models::{ProviderHealth, UsageSnapshot, WidgetPreferences};
+
+// ── Alert level（對應 1.0 `UsageAlertLevel`）──
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlertLevel {
+    None,
+    Warning,
+    Danger,
+}
+
+fn get_alert_level(percent: f64, warning_threshold: u32, danger_threshold: u32) -> AlertLevel {
+    if percent >= f64::from(danger_threshold) {
+        AlertLevel::Danger
+    } else if percent >= f64::from(warning_threshold) {
+        AlertLevel::Warning
+    } else {
+        AlertLevel::None
+    }
+}
+
+// ── Alert notification ──
+
+#[derive(Debug, Clone)]
+pub struct AlertNotification {
+    pub title: String,
+    pub body: String,
+}
+
+// ── Alert scope（對應 1.0 `AlertScope`）──
+
+struct AlertScope {
+    session_percent: f64,
+    weekly_percent: f64,
+    group_label: Option<String>,
+}
+
+/// 把 snapshot 攤平成一組 scope：有群組就逐群組，否則用 provider 頂層數值。
+/// 對應 1.0 group-aware 邏輯。
+fn build_scopes(snapshot: &UsageSnapshot) -> Vec<AlertScope> {
+    if let Some(ref groups) = snapshot.groups {
+        if !groups.is_empty() {
+            return groups
+                .iter()
+                .map(|g| AlertScope {
+                    session_percent: g.session_percent.unwrap_or(0.0),
+                    weekly_percent: g.weekly_percent.unwrap_or(0.0),
+                    group_label: Some(g.label.clone()),
+                })
+                .collect();
+        }
+    }
+
+    vec![AlertScope {
+        session_percent: snapshot.session_percent,
+        weekly_percent: snapshot.weekly_percent,
+        group_label: None,
+    }]
+}
+
+/// 組裝單一警示通知的標題與內文。
+fn build_alert(
+    display_name: &str,
+    scope: &AlertScope,
+    metric: &str,
+    percent: f64,
+    level: AlertLevel,
+) -> AlertNotification {
+    let provider_label = match &scope.group_label {
+        Some(label) => format!("{display_name} · {label}"),
+        None => display_name.to_string(),
+    };
+    let metric_label = if metric == "session" { "Session" } else { "Weekly" };
+    let emoji = if level == AlertLevel::Danger { "⛔" } else { "⚠️" };
+
+    AlertNotification {
+        title: "QuotaGem".to_string(),
+        body: format!(
+            "{emoji} {provider_label} — {metric_label} {percent}%",
+            percent = percent.round() as i64,
+        ),
+    }
+}
+
+// ── Alert tracker（對應 1.0 `createUsageAlertTracker`）──
+
+pub struct AlertTracker;
+
+impl AlertTracker {
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// 消費快照，回傳需發送的通知清單。
+    ///
+    /// 本階段（6.1）：對每個超過 warning/danger 閾值的 session/weekly 軌道發通知。
+    /// `health == Unavailable` 的 provider 整個跳過（避免暫時性 fetch 失敗誤觸）。
+    pub fn consume(
+        &self,
+        snapshots: &[UsageSnapshot],
+        warning_threshold: u32,
+        danger_threshold: u32,
+        notifications_enabled: bool,
+    ) -> Vec<AlertNotification> {
+        let mut alerts = Vec::new();
+
+        if !notifications_enabled {
+            return alerts;
+        }
+
+        for snapshot in snapshots {
+            if snapshot.health.as_ref() == Some(&ProviderHealth::Unavailable) {
+                continue;
+            }
+
+            let display_name = &snapshot.display_name;
+
+            for scope in &build_scopes(snapshot) {
+                for (metric, percent) in [
+                    ("session", scope.session_percent),
+                    ("weekly", scope.weekly_percent),
+                ] {
+                    let level = get_alert_level(percent, warning_threshold, danger_threshold);
+                    if level != AlertLevel::None {
+                        alerts.push(build_alert(display_name, scope, metric, percent, level));
+                    }
+                }
+            }
+        }
+
+        alerts
+    }
+}
+
+/// 處理快照閾值警示並發送 OS 通知。
+///
+/// 從 app state 取 `AlertTracker`，呼叫 `consume()`，
+/// 對每個 alert 用 `tauri-plugin-notification` 發送 Windows 通知。
+pub fn process_alerts(app: &AppHandle, snapshots: &[UsageSnapshot], prefs: &WidgetPreferences) {
+    let tracker_state = app.state::<std::sync::Mutex<AlertTracker>>();
+    let tracker = match tracker_state.lock() {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+
+    let alerts = tracker.consume(
+        snapshots,
+        prefs.warning_threshold,
+        prefs.danger_threshold,
+        prefs.notifications_enabled,
+    );
+
+    for alert in alerts {
+        let _ = app
+            .notification()
+            .builder()
+            .title(&alert.title)
+            .body(&alert.body)
+            .show();
+    }
+}
+
+// ── Tests ──
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{ProviderHealth, ProviderId, ProviderUsageGroup, UsageSnapshot};
+
+    fn make_snapshot(
+        provider: ProviderId,
+        name: &str,
+        session: f64,
+        weekly: f64,
+    ) -> UsageSnapshot {
+        UsageSnapshot {
+            provider,
+            display_name: name.to_string(),
+            session_percent: session,
+            session_reset_at: None,
+            weekly_percent: weekly,
+            weekly_reset_at: None,
+            last_updated: "2026-06-21T12:00:00Z".to_string(),
+            health: Some(ProviderHealth::Available),
+            groups: None,
+        }
+    }
+
+    fn make_grouped_snapshot(
+        provider: ProviderId,
+        name: &str,
+        groups: Vec<(&str, f64, f64)>,
+    ) -> UsageSnapshot {
+        UsageSnapshot {
+            provider,
+            display_name: name.to_string(),
+            session_percent: 0.0,
+            session_reset_at: None,
+            weekly_percent: 0.0,
+            weekly_reset_at: None,
+            last_updated: "2026-06-21T12:00:00Z".to_string(),
+            health: Some(ProviderHealth::Available),
+            groups: Some(
+                groups
+                    .into_iter()
+                    .map(|(label, session, weekly)| ProviderUsageGroup {
+                        label: label.to_string(),
+                        session_percent: Some(session),
+                        session_reset_at: None,
+                        weekly_percent: Some(weekly),
+                        weekly_reset_at: None,
+                    })
+                    .collect(),
+            ),
+        }
+    }
+
+    #[test]
+    fn normal_usage_produces_no_alerts() {
+        let tracker = AlertTracker::new();
+        let snapshots = vec![make_snapshot(ProviderId::Claude, "Claude", 50.0, 30.0)];
+
+        assert!(tracker.consume(&snapshots, 75, 90, true).is_empty());
+    }
+
+    #[test]
+    fn warning_threshold_triggers_alert() {
+        let tracker = AlertTracker::new();
+        let warning = vec![make_snapshot(ProviderId::Claude, "Claude", 80.0, 30.0)];
+
+        let alerts = tracker.consume(&warning, 75, 90, true);
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].body.contains("⚠️"));
+        assert!(alerts[0].body.contains("Claude"));
+        assert!(alerts[0].body.contains("Session"));
+        assert!(alerts[0].body.contains("80%"));
+    }
+
+    #[test]
+    fn danger_threshold_triggers_alert() {
+        let tracker = AlertTracker::new();
+        let danger = vec![make_snapshot(ProviderId::Codex, "Codex", 95.0, 30.0)];
+
+        let alerts = tracker.consume(&danger, 75, 90, true);
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].body.contains("⛔"));
+        assert!(alerts[0].body.contains("Codex"));
+    }
+
+    #[test]
+    fn notifications_disabled_produces_no_alerts() {
+        let tracker = AlertTracker::new();
+        let danger = vec![make_snapshot(ProviderId::Claude, "Claude", 95.0, 95.0)];
+
+        assert!(tracker.consume(&danger, 75, 90, false).is_empty());
+    }
+
+    #[test]
+    fn group_aware_alerts() {
+        let tracker = AlertTracker::new();
+        // 只有一個群組越過閾值
+        let mixed = vec![make_grouped_snapshot(
+            ProviderId::Antigravity,
+            "Antigravity",
+            vec![("Gemini Models", 85.0, 30.0), ("Gemini Code", 50.0, 30.0)],
+        )];
+
+        let alerts = tracker.consume(&mixed, 75, 90, true);
+        assert_eq!(alerts.len(), 1);
+        assert!(alerts[0].body.contains("Antigravity · Gemini Models"));
+        assert!(alerts[0].body.contains("Session"));
+    }
+}

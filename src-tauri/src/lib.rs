@@ -1,3 +1,4 @@
+pub mod alerts;
 pub mod models;
 pub mod provider;
 pub mod providers;
@@ -9,14 +10,16 @@ use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 
 #[tauri::command]
-async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
+async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
   let store = models::load_settings();
+  let prefs = store.to_preferences();
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
   let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  alerts::process_alerts(&app, &snapshots, &prefs);
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: store.to_preferences(),
+    preferences: prefs,
   })
 }
 
@@ -158,7 +161,9 @@ async fn refresh_usage(app: tauri::AppHandle) -> Result<(), String> {
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_autostart::Builder::default().build())
+    .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())
+    .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
       save_settings,
