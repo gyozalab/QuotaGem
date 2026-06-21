@@ -230,6 +230,9 @@ function App() {
             <p className="settings-sheet__copy">
               {t(language, "codexAutoDetected")}
             </p>
+            <p className="settings-sheet__copy">
+              {t(language, "antigravityAutoDetected")}
+            </p>
             <p className="settings-sheet__hint">
               {t(language, "recommendedConnectClaude")}
             </p>

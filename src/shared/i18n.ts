@@ -66,6 +66,7 @@ type TranslationKey =
   | "couldNotSaveClaudeSettings"
   | "recommendedConnectClaude"
   | "codexAutoDetected"
+  | "antigravityAutoDetected"
   | "claudeConnectedSuccessfully"
   | "couldNotConnectClaude"
   | "language"
@@ -150,6 +151,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
       "Recommended: press Connect Claude. Use manual credentials only if the login flow does not work.",
     codexAutoDetected:
       "Codex usage is auto-detected from your local desktop data. Claude works best through the login window below.",
+    antigravityAutoDetected:
+      "Antigravity usage is auto-detected from the Antigravity desktop app while it is running on this computer. Keep Antigravity open so it can report usage.",
     claudeConnectedSuccessfully: "Claude connected successfully.",
     couldNotConnectClaude: "Could not connect Claude.",
     language: "Language",
@@ -233,6 +236,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
       "建議直接按「連接 Claude」。只有在登入流程失敗時，才需要改用手動憑證。",
     codexAutoDetected:
       "Codex 用量會從本機桌面資料自動偵測。Claude 建議使用下方登入視窗來連接。",
+    antigravityAutoDetected:
+      "Antigravity 用量會在 Antigravity 桌面程式執行時，從本機自動偵測。請保持 Antigravity 開著才抓得到用量。",
     claudeConnectedSuccessfully: "Claude 連接成功。",
     couldNotConnectClaude: "無法連接 Claude。",
     language: "語言",
