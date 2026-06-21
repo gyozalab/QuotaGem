@@ -343,4 +343,70 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_antigravity_quota_parsing_fixture() {
+        let fixture_str = r#"{
+          "response": {
+            "groups": [
+              {
+                "displayName": "Gemini Models",
+                "buckets": [
+                  {
+                    "window": "weekly",
+                    "remainingFraction": 0.96395016,
+                    "resetTime": "2026-06-22T06:32:23Z"
+                  },
+                  {
+                    "window": "5h",
+                    "remainingFraction": 0.9967988,
+                    "resetTime": "2026-06-19T15:57:12Z"
+                  }
+                ]
+              },
+              {
+                "displayName": "Claude and GPT models",
+                "buckets": [
+                  {
+                    "window": "weekly",
+                    "remainingFraction": 1,
+                    "resetTime": "2026-06-26T11:42:55Z"
+                  },
+                  {
+                    "window": "5h",
+                    "remainingFraction": 1,
+                    "resetTime": "2026-06-19T16:42:55Z"
+                  }
+                ]
+              }
+            ]
+          }
+        }"#;
+
+        let summary: serde_json::Value = serde_json::from_str(fixture_str).unwrap();
+        let snap = extract_antigravity_quota(summary, "2026-06-19T20:00:00Z".to_string()).unwrap();
+
+        assert_eq!(snap.provider, ProviderId::Antigravity);
+        assert_eq!(snap.display_name, "Antigravity");
+        assert_eq!(snap.health, Some(ProviderHealth::Available));
+        assert_eq!(snap.last_updated, "2026-06-19T20:00:00Z");
+
+        let groups = snap.groups.unwrap();
+        assert_eq!(groups.len(), 2);
+
+        let gemini = groups.iter().find(|g| g.label == "Gemini Models").unwrap();
+        assert!((gemini.session_percent.unwrap() - 0.32012).abs() < 1e-4);
+        assert_eq!(gemini.session_reset_at.as_ref().unwrap().as_str().unwrap(), "2026-06-19T15:57:12Z");
+        assert!((gemini.weekly_percent.unwrap() - 3.604984).abs() < 1e-4);
+        assert_eq!(gemini.weekly_reset_at.as_ref().unwrap().as_str().unwrap(), "2026-06-22T06:32:23Z");
+
+        let claude_gpt = groups.iter().find(|g| g.label == "Claude and GPT models").unwrap();
+        assert_eq!(claude_gpt.session_percent.unwrap(), 0.0);
+        assert_eq!(claude_gpt.weekly_percent.unwrap(), 0.0);
+
+        assert!((snap.session_percent - 0.32012).abs() < 1e-4);
+        assert_eq!(snap.session_reset_at.as_ref().unwrap().as_str().unwrap(), "2026-06-19T15:57:12Z");
+        assert!((snap.weekly_percent - 3.604984).abs() < 1e-4);
+        assert_eq!(snap.weekly_reset_at.as_ref().unwrap().as_str().unwrap(), "2026-06-22T06:32:23Z");
+    }
 }
