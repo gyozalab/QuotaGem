@@ -5,6 +5,8 @@ pub mod refresh;
 pub mod tray;
 pub mod windows;
 
+use tauri::Manager;
+
 #[tauri::command]
 async fn fetch_usage_state() -> Result<models::UsageStateResponse, String> {
   let store = models::load_settings();
@@ -46,6 +48,61 @@ async fn save_settings(
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
   let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+
+  Ok(models::UsageStateResponse {
+    snapshots,
+    preferences: store.to_preferences(),
+  })
+}
+
+#[tauri::command]
+async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
+  let _login_window = tauri::WebviewWindowBuilder::new(
+    &app,
+    "claude_login",
+    tauri::WebviewUrl::App("https://claude.ai/login".parse().unwrap()),
+  )
+  .title("Log in to Claude")
+  .inner_size(1000.0, 700.0)
+  .focused(true)
+  .resizable(true)
+  .build()
+  .map_err(|e| e.to_string())?;
+
+  let mut session_key = None;
+  loop {
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // 檢查視窗是否已關閉（使用者手動關閉）
+    let win = match app.get_webview_window("claude_login") {
+      Some(w) => w,
+      None => break,
+    };
+
+    if let Ok(cookies) = win.cookies() {
+      if let Some(cookie) = cookies.into_iter().find(|c| c.name() == "sessionKey" && !c.value().is_empty()) {
+        session_key = Some(cookie.value().to_string());
+        let _ = win.close();
+        break;
+      }
+    }
+  }
+
+  let key = match session_key {
+    Some(k) => k,
+    None => return Err("Claude login window was closed before sign-in finished.".to_string()),
+  };
+
+  let provider = providers::claude::ClaudeProvider::new(None, None);
+  let org_id = provider.resolve_organization_id(&key).await.map_err(|e| e.to_string())?;
+
+  let mut store = models::load_settings();
+  store.claude_session_key = Some(key);
+  store.claude_organization_id = Some(org_id);
+
+  models::save_settings(&store).map_err(|e| e.to_string())?;
+
+  let snapshots = providers::get_all_snapshots(store.claude_session_key.clone(), store.claude_organization_id.clone()).await;
 
   Ok(models::UsageStateResponse {
     snapshots,
@@ -96,6 +153,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
       save_settings,
+      connect_claude,
       open_compact_panel,
       open_expanded_panel,
       close_panels,
