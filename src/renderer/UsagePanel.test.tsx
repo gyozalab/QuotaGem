@@ -296,6 +296,39 @@ describe("UsagePanel", () => {
     expect(antigravityCard).not.toHaveTextContent("Soon");
     expect(antigravityCard).not.toHaveTextContent("Later");
   });
+
+  it("renders a split ring as off when Antigravity is unavailable", async () => {
+    const rendererModule = await import("./UsagePanel");
+    const UsagePanel = Reflect.get(rendererModule, "UsagePanel");
+
+    if (typeof UsagePanel !== "function") {
+      return;
+    }
+
+    const unavailableAntigravity: NormalizedProviderUsage = {
+      ...antigravityProvider,
+      health: "unavailable",
+    };
+
+    render(
+      <UsagePanel
+        mode="compact"
+        providers={[unavailableAntigravity]}
+        language="en"
+        loading={false}
+        lastUpdatedLabel="Updated just now"
+      />,
+    );
+
+    const splitRing = screen.getByLabelText("Antigravity Unavailable");
+    expect(splitRing).toHaveClass("compact-ring--off");
+    expect(splitRing.querySelectorAll(".compact-ring__fill")).toHaveLength(0);
+
+    const card = screen.getByText("Antigravity").closest("article");
+    expect(card).toHaveTextContent("—");
+    expect(card).not.toHaveTextContent("30");
+    expect(card).not.toHaveTextContent("40");
+  });
 });
 
 describe("stripYear", () => {
