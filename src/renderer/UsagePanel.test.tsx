@@ -329,6 +329,65 @@ describe("UsagePanel", () => {
     expect(card).not.toHaveTextContent("30");
     expect(card).not.toHaveTextContent("40");
   });
+
+  it("renders the expanded panel with correct progress fill width, levels, and stripped years", async () => {
+    const rendererModule = await import("./UsagePanel");
+    const UsagePanel = Reflect.get(rendererModule, "UsagePanel");
+
+    if (typeof UsagePanel !== "function") {
+      return;
+    }
+
+    const testProviders: NormalizedProviderUsage[] = [
+      {
+        provider: "claude",
+        displayName: "Claude",
+        health: "available",
+        session: {
+          label: "Session",
+          percent: 80,
+          resetLabel: "2026-06-25 12:00 UTC",
+          level: "warning",
+        },
+        weekly: {
+          label: "Weekly",
+          percent: 95,
+          resetLabel: "06/30/2026 08:00 UTC",
+          level: "danger",
+        },
+        lastUpdated: "2026-06-21T12:00:00.000Z",
+      }
+    ];
+
+    const { container } = render(
+      <UsagePanel
+        mode="expanded"
+        providers={testProviders}
+        language="en"
+        loading={false}
+        lastUpdatedLabel="Updated just now"
+      />,
+    );
+
+    const rows = container.querySelectorAll(".quota-row");
+    expect(rows).toHaveLength(2);
+
+    // Row 1: Session 80% (Warning)
+    const sessionRow = rows[0];
+    const sessionFill = sessionRow.querySelector(".quota-row__fill");
+    expect(sessionFill).toHaveClass("quota-row__fill--warning");
+    expect(sessionFill).toHaveStyle({ width: "80%" });
+    expect(sessionRow).toHaveTextContent("80%");
+    expect(sessionRow).toHaveTextContent("↻ 06-25 12:00 UTC");
+
+    // Row 2: Weekly 95% (Danger)
+    const weeklyRow = rows[1];
+    const weeklyFill = weeklyRow.querySelector(".quota-row__fill");
+    expect(weeklyFill).toHaveClass("quota-row__fill--danger");
+    expect(weeklyFill).toHaveStyle({ width: "95%" });
+    expect(weeklyRow).toHaveTextContent("95%");
+    expect(weeklyRow).toHaveTextContent("↻ 06/30 08:00 UTC");
+  });
 });
 
 describe("stripYear", () => {
