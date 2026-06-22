@@ -340,9 +340,9 @@ function CompactRing({
   const level = getUsageLevel(value);
   const title = unavailable
     ? `${provider.displayName} · ${t(language, "unavailable")}`
-    : `${provider.displayName} · ${provider.session.label} ${Math.round(
+    : `${provider.displayName} · ${t(language, "fiveHourShort")} ${Math.round(
         provider.session.percent,
-      )}% · ${provider.weekly.label} ${Math.round(provider.weekly.percent)}%`;
+      )}% · ${t(language, "weeklyShort")} ${Math.round(provider.weekly.percent)}%`;
 
   return (
     <div
@@ -403,13 +403,13 @@ function SplitRing({
 
   const title = unavailable
     ? `${provider.displayName} · ${t(language, "unavailable")}`
-    : `${provider.displayName}\n${geminiLabel} · ${gemini.session.label} ${Math.round(
+    : `${provider.displayName}\n${geminiLabel} · ${t(language, "fiveHourShort")} ${Math.round(
         gemini.session.percent,
-      )}% · ${gemini.weekly.label} ${Math.round(
+      )}% · ${t(language, "weeklyShort")} ${Math.round(
         gemini.weekly.percent,
-      )}%\n${othersLabel} · ${others.session.label} ${Math.round(
+      )}%\n${othersLabel} · ${t(language, "fiveHourShort")} ${Math.round(
         others.session.percent,
-      )}% · ${others.weekly.label} ${Math.round(others.weekly.percent)}%`;
+      )}% · ${t(language, "weeklyShort")} ${Math.round(others.weekly.percent)}%`;
 
   return (
     <div
