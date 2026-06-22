@@ -2,12 +2,12 @@
 
 [繁體中文](./README.md) | English
 
-A Windows tray app for keeping `Claude` and `Codex` usage visible without living in browser tabs.
+A Windows tray app for keeping `Claude`, `Codex`, and `Antigravity` usage visible without living in browser tabs.
 
 With QuotaGem, you can quickly check:
 
 - current usage
-- session and weekly status
+- five-hour (session) and weekly status
 - reset times
 - warning and danger thresholds
 
@@ -19,7 +19,7 @@ With QuotaGem, you can quickly check:
 
 <img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
 
-### Claude-only or Codex-only view
+### Single-provider view
 
 <p>
   <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
@@ -42,11 +42,14 @@ With QuotaGem, you can quickly check:
 
 - A calm tray-first experience
 - `expanded` and `compact` panels
-- Unified view for `Claude` and `Codex`
-- A dedicated `Claude`-only or `Codex`-only view when you want less noise
+- Unified view for `Claude`, `Codex`, and `Antigravity`
+- Show only the providers you care about
+- The compact panel surfaces your five-hour usage, with weekly on hover
 - Custom warning and danger thresholds
 - Background notifications
 - Theme, transparency, and scale controls
+- Launch at login, waking up with Windows
+- English and Traditional Chinese UI
 - Built-in `Connect Claude` flow
 
 ## Why It Exists
@@ -58,30 +61,24 @@ when you use AI tools heavily, you should not discover your limits too late.
 It is not trying to be a giant dashboard or a management suite.  
 It is a small desktop companion that stays nearby and tells you what matters at a glance.
 
+Under the hood it is built on Tauri (Rust + the system WebView2), so the installer is a few MB and it sips memory while sitting in your tray all day.
+
 ## Download
 
-Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest `QuotaGem-*.exe`. Run it directly — no installation needed.
+Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest installer (`QuotaGem_*_x64-setup.exe` or `QuotaGem_*_x64_en-US.msi`), then follow the prompts. You can enable launch-at-login from the settings panel.
 
 ## For Developers
+
+Built with Tauri 2 (Rust + React). You need the Rust toolchain and Node.js installed.
 
 ```powershell
 git clone https://github.com/gyozalab/QuotaGem.git
 cd QuotaGem
 npm install
-npm run dev
+npx tauri dev      # development
+npx tauri build    # package installers (MSI + NSIS)
 ```
 
-## Current Status
+## Status
 
-The core experience is already working:
-
-- panel switching is in place
-- QuotaGem branding is live
-- notifications, thresholds, date formats, and panel scaling are done
-- the project now lives in its own standalone repository
-
-## Next Up
-
-- prepare the Windows `.exe` packaging flow
-- verify launch-at-login and tray behavior in the packaged app
-- keep refining the experience based on real usage
+The Tauri 2.0 rewrite is feature-complete: all three providers, both panels, settings, alerts, themes, i18n, and launch-at-login are in place and packaged as MSI/NSIS installers.
