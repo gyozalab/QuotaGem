@@ -71,9 +71,10 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
             }
         });
 
-    if let Some(icon) = app.default_window_icon().cloned() {
-        tray = tray.icon(icon);
-    }
+    // 托盤用專用的簡化圖（2 點，對齊 1.0 的 tray-icon-runtime.png），
+    // 而非 default_window_icon（3 點 app 圖縮小後在托盤上顯雜）。
+    // include_image! 編譯時內嵌，無執行期路徑依賴（boot-safe）。
+    tray = tray.icon(tauri::include_image!("icons/tray-icon-runtime.png"));
 
     tray.build(app)?;
     Ok(())
