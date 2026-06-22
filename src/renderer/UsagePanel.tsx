@@ -311,13 +311,6 @@ function WarnIcon() {
 const RING_CIRCUMFERENCE = 125.664;
 const RING_HALF = 62.832;
 
-function harderPercent(
-  a: { percent: number },
-  b: { percent: number },
-): number {
-  return Math.max(a.percent, b.percent);
-}
-
 function CompactRing({
   provider,
   language,
@@ -342,7 +335,8 @@ function CompactRing({
     );
   }
 
-  const value = harderPercent(provider.session, provider.weekly);
+  // 小面板圓環顯示「五小時」額度（session track）；每週用量保留在 hover tooltip。
+  const value = provider.session.percent;
   const level = getUsageLevel(value);
   const title = unavailable
     ? `${provider.displayName} · ${t(language, "unavailable")}`
@@ -398,8 +392,9 @@ function SplitRing({
     groups.find((group) => group.label.toLowerCase().startsWith("gemini")) ??
     groups[0];
   const others = groups.find((group) => group !== gemini) ?? groups[1];
-  const geminiValue = harderPercent(gemini.session, gemini.weekly);
-  const othersValue = harderPercent(others.session, others.weekly);
+  // 雙環各自顯示該群組的「五小時」額度（session）；每週退到 hover tooltip。
+  const geminiValue = gemini.session.percent;
+  const othersValue = others.session.percent;
   const geminiLevel = getUsageLevel(geminiValue);
   const othersLevel = getUsageLevel(othersValue);
   // 用實際比對到的群組名，畸形資料（沒有 gemini 群組時 fallback groups[0]）才不會被誤標成 Gemini/Others。

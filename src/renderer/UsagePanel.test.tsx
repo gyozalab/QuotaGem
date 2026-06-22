@@ -253,13 +253,13 @@ describe("UsagePanel", () => {
     expect(screen.queryByText("5 hours")).not.toBeInTheDocument();
     expect(screen.queryByText("Weekly")).not.toBeInTheDocument();
 
-    // Claude ring surfaces the tighter of session (35) / weekly (22).
+    // Claude ring surfaces the five-hour session value (35), not the weekly (22).
     expect(screen.getByText("35%")).toBeInTheDocument();
 
     // Antigravity stays honest: one ring split into two halves, each the
-    // tighter window of its group (Gemini max(10,30)=30, Others max(40,20)=40),
+    // five-hour session of its group (Gemini 10, Others 40),
     // and the spoken names come from the real group labels, not hardcoded.
-    const splitRing = screen.getByLabelText("Gemini 30%, Claude and GPT 40%");
+    const splitRing = screen.getByLabelText("Gemini 10%, Claude and GPT 40%");
     const splitFills = splitRing.querySelectorAll(".compact-ring__fill");
     expect(splitFills).toHaveLength(2);
     // Gemini = left semicircle (sweep 0), Others = right (sweep 1): guards a swap.
@@ -268,7 +268,7 @@ describe("UsagePanel", () => {
     // Arc fill length reflects percent over the half-circumference (62.832).
     expect(
       parseFloat(splitFills[0].getAttribute("stroke-dasharray")!.split(" ")[0]),
-    ).toBeCloseTo((62.832 * 30) / 100, 1);
+    ).toBeCloseTo((62.832 * 10) / 100, 1);
     expect(
       parseFloat(splitFills[1].getAttribute("stroke-dasharray")!.split(" ")[0]),
     ).toBeCloseTo((62.832 * 40) / 100, 1);
@@ -290,7 +290,7 @@ describe("UsagePanel", () => {
 
     const antigravityCard = screen.getByText("Antigravity").closest("article");
     expect(antigravityCard).not.toBeNull();
-    expect(antigravityCard).toHaveTextContent("30");
+    expect(antigravityCard).toHaveTextContent("10");
     expect(antigravityCard).toHaveTextContent("40");
     expect(antigravityCard?.querySelectorAll(".compact-reset-chip")).toHaveLength(0);
     expect(antigravityCard).not.toHaveTextContent("Soon");
@@ -326,7 +326,7 @@ describe("UsagePanel", () => {
 
     const card = screen.getByText("Antigravity").closest("article");
     expect(card).toHaveTextContent("—");
-    expect(card).not.toHaveTextContent("30");
+    expect(card).not.toHaveTextContent("10");
     expect(card).not.toHaveTextContent("40");
   });
 
