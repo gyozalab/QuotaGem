@@ -22,6 +22,33 @@ fn with_real_autostart(
   prefs
 }
 
+/// 一次性清除 1.0（Electron）殘留的開機自啟登錄機碼。
+///
+/// 舊版 Electron autostart 會在 `HKCU\...\Run` 寫入 `electron.app.QuotaGem`
+/// 與 `electron.app.Electron` 兩個固定機碼值。1.0→2.0 升級者若不清，開機時
+/// 空殼舊版會被拉起佔住托盤、新版反而起不來。這裡只刪這兩個固定名稱，
+/// **不動** 2.0 自己（`tauri-plugin-autostart`）寫的 `QuotaGem` 機碼。
+/// 刪失敗（機碼不存在、權限不足等）一律忽略，不影響啟動。
+#[cfg(windows)]
+fn cleanup_legacy_electron_autostart() {
+  use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
+  use winreg::RegKey;
+
+  let run = match RegKey::predef(HKEY_CURRENT_USER)
+    .open_subkey_with_flags(r"Software\Microsoft\Windows\CurrentVersion\Run", KEY_SET_VALUE)
+  {
+    Ok(key) => key,
+    Err(_) => return,
+  };
+
+  for legacy in ["electron.app.QuotaGem", "electron.app.Electron"] {
+    let _ = run.delete_value(legacy);
+  }
+}
+
+#[cfg(not(windows))]
+fn cleanup_legacy_electron_autostart() {}
+
 #[tauri::command]
 async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
   let store = models::load_settings();
@@ -211,6 +238,9 @@ pub fn run() {
       }
       windows::setup(app)?;
       tray::setup(app)?;
+
+      // 一次性清掉 1.0（Electron）殘留的開機自啟機碼，避免升級者開機被空殼舊版佔位。
+      cleanup_legacy_electron_autostart();
 
       // 開機自啟：啟動時依儲存偏好重新套用到系統，修復外部改動造成的漂移
       // （對齊 1.0 syncLaunchAtLoginPreference）。

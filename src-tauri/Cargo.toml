@@ -30,3 +30,8 @@ reqwest = { version = "0.12", features = ["json", "cookies"] }
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
+
+# Windows-only：一次性清除 1.0（Electron）殘留的開機自啟登錄機碼（lib.rs setup）。
+# 版本對齊 tauri-plugin-autostart 已傳遞鎖定的 winreg 0.55，不新增重複版本。
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
