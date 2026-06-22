@@ -1,17 +1,17 @@
 [package]
-name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+name = "quotagem"
+version = "2.0.0"
+description = "Lightweight tray monitor for Claude, Codex, and Antigravity usage quotas"
+authors = ["gyozalab"]
 license = ""
-repository = ""
+repository = "https://github.com/gyozalab/QuotaGem"
 edition = "2021"
 rust-version = "1.77.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "app_lib"
+name = "quotagem_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
