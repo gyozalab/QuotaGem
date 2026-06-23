@@ -558,6 +558,78 @@ select {
   font-size: 12px;
 }
 
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.settings-tab {
+  border: 1px solid rgba(var(--panel-border-rgb), 0.18);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(var(--panel-input-rgb), 0.14);
+  color: rgba(var(--panel-muted-rgb), 0.84);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.settings-tab:hover {
+  background: rgba(var(--panel-input-rgb), 0.2);
+  color: rgba(var(--panel-text-rgb), 0.96);
+}
+
+.settings-tab--active {
+  background: rgba(var(--panel-input-rgb), 0.28);
+  border-color: rgba(var(--panel-border-rgb), 0.34);
+  color: rgba(var(--panel-text-rgb), 0.98);
+}
+
+.settings-tabpanel {
+  margin-top: 6px;
+}
+
+.settings-subtabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.settings-subtab {
+  border: 1px solid rgba(var(--panel-border-rgb), 0.12);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(var(--panel-input-rgb), 0.08);
+  color: rgba(var(--panel-muted-rgb), 0.78);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-subtab:hover {
+  background: rgba(var(--panel-input-rgb), 0.14);
+  color: rgba(var(--panel-text-rgb), 0.92);
+}
+
+.settings-subtab--active {
+  background: rgba(var(--panel-input-rgb), 0.22);
+  border-color: rgba(var(--panel-border-rgb), 0.24);
+  color: rgba(var(--panel-text-rgb), 0.96);
+}
+
+.settings-subpanel {
+  margin-top: 4px;
+}
+
 .settings-sheet__hint,
 .settings-sheet__notice {
   margin: 12px 0 0;

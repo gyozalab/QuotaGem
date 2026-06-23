@@ -20,6 +20,9 @@ describe("i18n", () => {
     expect(t("zh-CN", "settings")).toBe("设置");
     expect(t("zh-CN", "simplifiedChinese")).toBe("简体中文");
     expect(t("zh-CN", "codexDataSourceLocal")).toBe("本地数据");
+    expect(t("zh-CN", "settingsGeneralTab")).toBe("通用");
+    expect(t("zh-CN", "settingsClaudeTab")).toBe("Claude");
+    expect(t("zh-CN", "generalAppearanceTab")).toBe("外观");
   });
 
   it("maps system locales to the expected widget language", () => {

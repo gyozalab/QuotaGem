@@ -63,6 +63,16 @@ type TranslationKey =
   | "codexDailyLimit"
   | "codexWeeklyLimit"
   | "codexMonthlyLimit"
+  | "settingsGeneralTab"
+  | "settingsCodexTab"
+  | "settingsClaudeTab"
+  | "generalSettingsHint"
+  | "generalBehaviorTab"
+  | "generalAlertsTab"
+  | "generalTimeTab"
+  | "generalAppearanceTab"
+  | "codexSettingsHint"
+  | "claudeSettingsHint"
   | "expandedPanel"
   | "compactPanel"
   | "bothProviders"
@@ -150,6 +160,16 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     codexDailyLimit: "Daily limit ($)",
     codexWeeklyLimit: "Weekly limit ($)",
     codexMonthlyLimit: "Monthly limit ($)",
+    settingsGeneralTab: "General",
+    settingsCodexTab: "Codex",
+    settingsClaudeTab: "Claude",
+    generalSettingsHint: "Choose how the widget behaves, looks, and refreshes.",
+    generalBehaviorTab: "Behavior",
+    generalAlertsTab: "Alerts",
+    generalTimeTab: "Time",
+    generalAppearanceTab: "Appearance",
+    codexSettingsHint: "Choose the Codex data source and local pricing rules.",
+    claudeSettingsHint: "Connect Claude through the login window and manage Claude here.",
     expandedPanel: "Expanded panel",
     compactPanel: "Compact panel",
     bothProviders: "Claude + Codex",
@@ -238,6 +258,16 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     codexDailyLimit: "每日限額 ($)",
     codexWeeklyLimit: "每週限額 ($)",
     codexMonthlyLimit: "每月限額 ($)",
+    settingsGeneralTab: "通用",
+    settingsCodexTab: "Codex",
+    settingsClaudeTab: "Claude",
+    generalSettingsHint: "調整面板行為、外觀與更新方式。",
+    generalBehaviorTab: "行為",
+    generalAlertsTab: "提醒",
+    generalTimeTab: "時間",
+    generalAppearanceTab: "外觀",
+    codexSettingsHint: "選擇 Codex 資料來源與本機成本換算規則。",
+    claudeSettingsHint: "透過登入視窗連接 Claude，並在這裡管理相關設定。",
     expandedPanel: "大面板",
     compactPanel: "小面板",
     bothProviders: "Claude + Codex",
@@ -326,6 +356,16 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     codexDailyLimit: "每日限额 ($)",
     codexWeeklyLimit: "每周限额 ($)",
     codexMonthlyLimit: "每月限额 ($)",
+    settingsGeneralTab: "通用",
+    settingsCodexTab: "Codex",
+    settingsClaudeTab: "Claude",
+    generalSettingsHint: "调整面板行为、外观与刷新方式。",
+    generalBehaviorTab: "行为",
+    generalAlertsTab: "提醒",
+    generalTimeTab: "时间",
+    generalAppearanceTab: "外观",
+    codexSettingsHint: "选择 Codex 数据来源与本地成本换算规则。",
+    claudeSettingsHint: "通过登录窗口连接 Claude，并在这里管理相关设置。",
     expandedPanel: "大面板",
     compactPanel: "小面板",
     bothProviders: "Claude + Codex",

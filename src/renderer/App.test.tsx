@@ -106,6 +106,8 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
+    await userEvent.click(await screen.findByRole("tab", { name: "Alerts" }));
+
     const warningThreshold = await screen.findByLabelText("Warning threshold");
     const dangerThreshold = await screen.findByLabelText("Danger threshold");
 
@@ -131,6 +133,8 @@ describe("App", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Alerts" }));
 
     const notificationsEnabled = await screen.findByLabelText(
       "Enable notifications",
@@ -160,6 +164,8 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
+    await userEvent.click(await screen.findByRole("tab", { name: "Appearance" }));
+
     const panelScale = await screen.findByRole("slider", {
       name: "Panel scale: 100%",
     });
@@ -183,6 +189,8 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
+    await userEvent.click(await screen.findByRole("tab", { name: "Appearance" }));
+
     const panelTone = await screen.findByLabelText("Panel background color");
 
     await userEvent.selectOptions(panelTone, "linen");
@@ -203,6 +211,8 @@ describe("App", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Time" }));
 
     const dateFormat = await screen.findByLabelText("Date format");
 
@@ -230,12 +240,58 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("organizes settings into General, Codex, and Claude tabs", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    expect(await screen.findByRole("tab", { name: "General" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByLabelText("Codex data source")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Codex" }));
+
+    expect(await screen.findByLabelText("Codex data source")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Claude" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Connect Claude" }),
+    ).toBeInTheDocument();
+  });
+
+  it("splits General settings into Behavior, Alerts, Time, and Appearance subtabs", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    expect(await screen.findByRole("tab", { name: "Behavior" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByLabelText("Panel background color")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Appearance" }));
+    expect(await screen.findByLabelText("Panel background color")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Time" }));
+    expect(await screen.findByLabelText("Date format")).toBeInTheDocument();
+  });
+
   it("lets people switch Codex to local data and set provider limits", async () => {
     render(<App />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Codex" }));
 
     const codexDataSource = await screen.findByLabelText("Codex data source");
 
