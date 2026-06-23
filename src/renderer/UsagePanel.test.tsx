@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
+import { afterAll, beforeAll, vi } from "vitest";
 
 import type { NormalizedProviderUsage } from "../shared/usage";
 
@@ -90,10 +90,31 @@ const localCodexProvider: NormalizedProviderUsage = {
     sourceLabel: "Local Codex data",
     totalTokensLabel: "801.6M tokens",
     estimatedCostLabel: "Estimated cost $542.21",
+    historyUsageLabel: "History: 801.6M ($542.21)",
+    weeklyUsageLabel: "This week: 12.4M ($8.12)",
+    todayUsageLabel: "Today: 1.8M ($1.02)",
     multiplierLabel: "Provider multiplier x1.5",
     modelLabel: "Pricing model gpt-5.5",
     sessionCountLabel: "43 sessions",
     tokenBreakdownLabel: "Input/cached/output/reasoning 798.4M / 739.5M / 3.3M / 1M",
+    recentDailyUsage: [
+      {
+        dateLabel: "06/17",
+        tokensLabel: "1.1M",
+        costLabel: "$0.72",
+        costUsd: 0.72,
+        totalTokens: 1_100_000,
+        barPercent: 70,
+      },
+      {
+        dateLabel: "06/18",
+        tokensLabel: "1.8M",
+        costLabel: "$1.02",
+        costUsd: 1.02,
+        totalTokens: 1_800_000,
+        barPercent: 100,
+      },
+    ],
   },
   lastUpdated: "2026-06-23T02:22:38.325Z",
 };
@@ -124,6 +145,22 @@ const remainingCodexProvider: NormalizedProviderUsage = {
       }
     : undefined,
 };
+
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+
+beforeAll(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+    configurable: true,
+    value: vi.fn(() => null),
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+    configurable: true,
+    value: originalGetContext,
+  });
+});
 
 describe("UsagePanel", () => {
   it("renders the expanded panel with both providers visible and exposes compact, refresh, settings, and close actions", async () => {
@@ -164,7 +201,7 @@ describe("UsagePanel", () => {
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Updated just now").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button")).toHaveLength(4);
-    await userEvent.click(screen.getByRole("button", { name: "Open compact usage panel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open expanded usage panel" }));
     await userEvent.click(screen.getByRole("button", { name: "Refresh usage" }));
     await userEvent.click(screen.getByRole("button", { name: "Open settings" }));
     await userEvent.click(screen.getByRole("button", { name: "Hide panel" }));
@@ -240,13 +277,13 @@ describe("UsagePanel", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Open expanded usage panel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open compact usage panel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide panel" })).toBeInTheDocument();
     expect(screen.getByText("Claude")).toBeInTheDocument();
     expect(screen.getByText("Codex")).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Open expanded usage panel" }),
+      screen.getByRole("button", { name: "Open compact usage panel" }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Hide panel" }));
 
@@ -281,6 +318,35 @@ describe("UsagePanel", () => {
     expect(screen.getByText("68%")).toBeInTheDocument();
     expect(screen.getByText("12%")).toBeInTheDocument();
     expect(screen.queryByText("Local Codex data")).not.toBeInTheDocument();
+  });
+
+  it("renders local Codex history chart in the wide panel", async () => {
+    const rendererModule = await import("./UsagePanel");
+    const UsagePanel = Reflect.get(rendererModule, "UsagePanel");
+
+    expect(typeof UsagePanel).toBe("function");
+
+    if (typeof UsagePanel !== "function") {
+      return;
+    }
+
+    const { container } = render(
+      <UsagePanel
+        mode="compact"
+        providers={[localCodexProvider]}
+        language="en"
+        loading={false}
+        lastUpdatedLabel="Updated just now"
+      />,
+    );
+
+    expect(screen.getByText("History: 801.6M ($542.21)")).toBeInTheDocument();
+    expect(screen.getByText("This week: 12.4M ($8.12)")).toBeInTheDocument();
+    expect(screen.getByText("Today: 1.8M ($1.02)")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Today: 1.8M ($1.02)" })).toBeInTheDocument();
+    expect(container.querySelector(".compact-widget__mark")).not.toBeInTheDocument();
+    expect(container.querySelector(".usage-history__canvas")).toBeInTheDocument();
+    expect(container.querySelector(".usage-history__line")).not.toBeInTheDocument();
   });
 
   it("renders local Codex usage details in the compact panel", async () => {

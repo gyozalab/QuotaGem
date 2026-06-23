@@ -1,7 +1,27 @@
-import type { Ref } from "react";
+import { useEffect, useMemo, useRef, type Ref } from "react";
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  LinearScale,
+  Tooltip,
+  type ChartConfiguration,
+} from "chart.js";
 
 import { t, type WidgetLanguage } from "../shared/i18n";
 import type { NormalizedProviderUsage } from "../shared/usage";
+
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
+
+const WEATHER_COST_STOPS = [
+  { costUsd: 0, rgb: [96, 190, 255] },
+  { costUsd: 20, rgb: [139, 211, 255] },
+  { costUsd: 35, rgb: [255, 224, 118] },
+  { costUsd: 50, rgb: [255, 184, 60] },
+  { costUsd: 80, rgb: [255, 128, 79] },
+  { costUsd: 120, rgb: [229, 69, 86] },
+] as const;
 
 export interface UsagePanelProps {
   mode: "expanded" | "compact";
@@ -37,6 +57,8 @@ export function UsagePanel({
         : providers.length === 1
           ? " compact-widget__columns--single"
           : "";
+    const localUsage = providers.find((provider) => provider.localUsage)
+      ?.localUsage;
 
     return (
       <main className="compact-shell">
@@ -44,7 +66,6 @@ export function UsagePanel({
           <div className="compact-widget__toolbar drag-region">
             <div className="compact-widget__identity">
               <span className="compact-widget__brand">
-                <UsageMark className="compact-widget__mark" />
                 <span>QuotaGem</span>
               </span>
               <span className="compact-widget__meta" aria-live="polite">
@@ -76,6 +97,7 @@ export function UsagePanel({
               </button>
             </div>
           </div>
+          {localUsage ? <UsageHistoryChart localUsage={localUsage} /> : null}
           <div className="compact-widget__content no-drag">
             <div className={`compact-widget__columns${colClass}`}>
               {providers.map((provider) => (
@@ -300,6 +322,184 @@ export function UsagePanel({
       </section>
     </main>
   );
+}
+
+function UsageHistoryChart({
+  localUsage,
+}: {
+  localUsage: NonNullable<NormalizedProviderUsage["localUsage"]>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chartDays = useMemo(
+    () => localUsage.recentDailyUsage,
+    [localUsage.recentDailyUsage],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || chartDays.length === 0) {
+      return;
+    }
+
+    let context: CanvasRenderingContext2D | null = null;
+
+    try {
+      context = canvas.getContext("2d");
+    } catch {
+      return;
+    }
+
+    if (!context) {
+      return;
+    }
+
+    const config: ChartConfiguration<"bar", number[], string> = {
+      type: "bar",
+      data: {
+        labels: chartDays.map((day) => day.dateLabel),
+        datasets: [
+          {
+            data: chartDays.map((day) => day.costUsd),
+            backgroundColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 0.9),
+            ),
+            borderColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 1),
+            ),
+            borderWidth: 1,
+            borderRadius: 6,
+            borderSkipped: false,
+            hoverBackgroundColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 0.98),
+            ),
+            maxBarThickness: 22,
+          },
+        ],
+      },
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        responsive: true,
+        layout: {
+          padding: {
+            top: 4,
+            right: 8,
+            bottom: 0,
+            left: 8,
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(15, 17, 23, 0.96)",
+            bodyColor: "rgba(245, 247, 251, 0.88)",
+            borderColor: "rgba(255, 255, 255, 0.14)",
+            borderWidth: 1,
+            displayColors: false,
+            padding: 10,
+            titleColor: "rgba(245, 247, 251, 0.96)",
+            callbacks: {
+              label(context) {
+                const day = chartDays[context.dataIndex];
+
+                return day ? `Tokens: ${day.tokensLabel}` : "";
+              },
+              afterLabel(context) {
+                const day = chartDays[context.dataIndex];
+
+                return day ? `Cost: ${day.costLabel}` : "";
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            border: {
+              display: false,
+            },
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: "rgba(245, 247, 251, 0.7)",
+              font: {
+                size: 11,
+                weight: 600,
+              },
+              maxRotation: 0,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            border: {
+              display: false,
+            },
+            display: false,
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    };
+
+    const chart = new Chart(context, config);
+
+    return () => {
+      chart.destroy();
+    };
+  }, [chartDays]);
+
+  return (
+    <section className="usage-history no-drag">
+      <div className="usage-history__summary">
+        <span>{localUsage.historyUsageLabel}</span>
+        <span>{localUsage.weeklyUsageLabel}</span>
+        <span>{localUsage.todayUsageLabel}</span>
+      </div>
+      <div
+        className="usage-history__chart"
+        role="img"
+        aria-label={localUsage.todayUsageLabel}
+      >
+        <canvas className="usage-history__canvas" ref={canvasRef} />
+      </div>
+    </section>
+  );
+}
+
+function getWeatherUsageColor(costUsd: number, alpha: number) {
+  const safeCost = Number.isFinite(costUsd) ? Math.max(costUsd, 0) : 0;
+  const firstStop = WEATHER_COST_STOPS[0];
+  const lastStop = WEATHER_COST_STOPS[WEATHER_COST_STOPS.length - 1];
+
+  if (safeCost <= firstStop.costUsd) {
+    return formatRgba(firstStop.rgb, alpha);
+  }
+
+  if (safeCost >= lastStop.costUsd) {
+    return formatRgba(lastStop.rgb, alpha);
+  }
+
+  const nextStopIndex = WEATHER_COST_STOPS.findIndex(
+    (stop) => stop.costUsd >= safeCost,
+  );
+  const nextStop = WEATHER_COST_STOPS[nextStopIndex];
+  const previousStop = WEATHER_COST_STOPS[nextStopIndex - 1] ?? firstStop;
+  const range = nextStop.costUsd - previousStop.costUsd || 1;
+  const ratio = (safeCost - previousStop.costUsd) / range;
+  const rgb = previousStop.rgb.map((channel, index) =>
+    Math.round(channel + (nextStop.rgb[index] - channel) * ratio),
+  ) as [number, number, number];
+
+  return formatRgba(rgb, alpha);
+}
+
+function formatRgba(rgb: readonly [number, number, number], alpha: number) {
+  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
 
 function ProviderMetric({

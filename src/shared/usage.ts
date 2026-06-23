@@ -21,6 +21,7 @@ export interface ProviderUsageSnapshot {
   thirdPartyWeeklyPercent?: number;
   thirdPartyWeeklyResetAt?: number | string | Date | null;
   localUsage?: LocalTokenUsageSnapshot;
+  localUsagePrimary?: boolean;
 }
 
 export interface LocalTokenUsageSnapshot {
@@ -31,6 +32,8 @@ export interface LocalTokenUsageSnapshot {
   reasoningOutputTokens: number;
   totalTokens: number;
   estimatedCostUsd: number;
+  weeklyTokens: number;
+  dailyTokens: number;
   dailyCostUsd: number;
   weeklyCostUsd: number;
   monthlyCostUsd: number;
@@ -41,6 +44,11 @@ export interface LocalTokenUsageSnapshot {
   sessionCount: number;
   model: string;
   pricingModel: string;
+  recentDailyUsage: Array<{
+    date: string;
+    totalTokens: number;
+    costUsd: number;
+  }>;
 }
 
 export interface NormalizedProviderUsage {
@@ -97,10 +105,21 @@ export interface NormalizedProviderUsage {
     sourceLabel: string;
     totalTokensLabel: string;
     estimatedCostLabel: string;
+    historyUsageLabel: string;
+    weeklyUsageLabel: string;
+    todayUsageLabel: string;
     multiplierLabel: string;
     modelLabel: string;
     sessionCountLabel: string;
     tokenBreakdownLabel: string;
+    recentDailyUsage: Array<{
+      dateLabel: string;
+      tokensLabel: string;
+      costLabel: string;
+      costUsd: number;
+      totalTokens: number;
+      barPercent: number;
+    }>;
   };
   lastUpdated: string;
 }
@@ -146,9 +165,11 @@ export function normalizeProviderUsage(
   const lang = options.language;
   const isChinese = isChineseLanguage(lang);
 
+  const isLocalUsagePrimary =
+    Boolean(snapshot.localUsage) && snapshot.localUsagePrimary !== false;
   const sessionLabel = isAgy
     ? (isChinese ? (lang === "zh-CN" ? "Gemini 5小时" : "Gemini 5小時") : "Gemini 5h")
-    : snapshot.localUsage
+    : isLocalUsagePrimary
       ? (isChinese ? "每日" : "Daily")
     : t(lang, "session");
   const weeklyLabel = isAgy
@@ -321,6 +342,12 @@ function formatLocalUsage(
     minimumFractionDigits: usage.estimatedCostUsd >= 1 ? 2 : 4,
     style: "currency",
   });
+  const summaryCostNumber = new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  });
 
   const isChinese = isChineseLanguage(language);
   const sourceLabel =
@@ -344,6 +371,10 @@ function formatLocalUsage(
     isChinese
       ? language === "zh-CN" ? "输入/缓存/输出/推理" : "輸入/快取/輸出/推理"
       : "Input/cached/output/reasoning";
+  const maxDailyCost = Math.max(
+    0,
+    ...usage.recentDailyUsage.map((day) => day.costUsd),
+  );
 
   return {
     sourceLabel,
@@ -351,6 +382,18 @@ function formatLocalUsage(
     estimatedCostLabel: `${estimatedCostPrefix} ${costNumber.format(
       usage.estimatedCostUsd,
     )}`,
+    historyUsageLabel: t(language, "historyUsageSummary", {
+      tokens: formatTokenUnit(usage.totalTokens, language),
+      cost: summaryCostNumber.format(usage.estimatedCostUsd),
+    }),
+    weeklyUsageLabel: t(language, "weeklyUsageSummary", {
+      tokens: formatTokenUnit(usage.weeklyTokens, language),
+      cost: summaryCostNumber.format(usage.weeklyCostUsd),
+    }),
+    todayUsageLabel: t(language, "todayUsageSummary", {
+      tokens: formatTokenUnit(usage.dailyTokens, language),
+      cost: summaryCostNumber.format(usage.dailyCostUsd),
+    }),
     multiplierLabel: `${multiplierPrefix} x${usage.providerMultiplier.toFixed(1)}`,
     modelLabel: `${modelPrefix} ${usage.pricingModel}`,
     sessionCountLabel: `${tokenNumber.format(usage.sessionCount)} ${sessionsSuffix}`,
@@ -362,7 +405,82 @@ function formatLocalUsage(
     ]
       .map((value) => compactNumber.format(value))
       .join(" / ")}`,
+    recentDailyUsage: usage.recentDailyUsage.map((day) => ({
+      dateLabel: formatShortDateLabel(day.date, language),
+      tokensLabel: formatTokenUnit(day.totalTokens, language),
+      costLabel: summaryCostNumber.format(day.costUsd),
+      costUsd: day.costUsd,
+      totalTokens: day.totalTokens,
+      barPercent: maxDailyCost > 0
+        ? Math.max(4, (day.costUsd / maxDailyCost) * 100)
+        : 0,
+    })),
   };
+}
+
+function formatTokenUnit(tokens: number, language: WidgetLanguage): string {
+  const safeTokens = Math.max(0, Math.round(tokens));
+
+  if (language === "zh-CN" || language === "zh-TW") {
+    const units =
+      language === "zh-CN"
+        ? [
+            { value: 100_000_000, label: "亿" },
+            { value: 10_000_000, label: "千万" },
+            { value: 1_000_000, label: "百万" },
+            { value: 10_000, label: "万" },
+            { value: 1_000, label: "千" },
+          ]
+        : [
+            { value: 100_000_000, label: "億" },
+            { value: 10_000_000, label: "千萬" },
+            { value: 1_000_000, label: "百萬" },
+            { value: 10_000, label: "萬" },
+            { value: 1_000, label: "千" },
+          ];
+    const unit = units.find((candidate) => safeTokens >= candidate.value);
+
+    if (!unit) {
+      return String(safeTokens);
+    }
+
+    return `${formatUnitNumber(safeTokens / unit.value)}${unit.label}`;
+  }
+
+  const units = [
+    { value: 1_000_000_000, label: "B" },
+    { value: 1_000_000, label: "M" },
+    { value: 1_000, label: "K" },
+  ];
+  const unit = units.find((candidate) => safeTokens >= candidate.value);
+
+  if (!unit) {
+    return String(safeTokens);
+  }
+
+  return `${formatUnitNumber(safeTokens / unit.value)}${unit.label}`;
+}
+
+function formatUnitNumber(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value >= 10 ? 0 : 1,
+  }).format(value);
+}
+
+function formatShortDateLabel(
+  date: string,
+  language: WidgetLanguage,
+): string {
+  const parsed = new Date(`${date}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat(getLocaleForLanguage(language), {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(parsed);
 }
 
 export function normalizeUsageThresholds({

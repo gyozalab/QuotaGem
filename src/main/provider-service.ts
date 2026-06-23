@@ -175,7 +175,30 @@ async function readCodexSnapshot(
     return readLocalCodexSnapshot(store);
   }
 
-  return readOfficialCodexSnapshot();
+  const [officialSnapshot, localSnapshot] = await Promise.all([
+    readOfficialCodexSnapshot(),
+    readLocalCodexSnapshot(store),
+  ]);
+
+  if (!officialSnapshot) {
+    return localSnapshot
+      ? { ...localSnapshot, localUsagePrimary: true }
+      : null;
+  }
+
+  if (!localSnapshot?.localUsage) {
+    return officialSnapshot;
+  }
+
+  console.info(
+    `【Codex本地数据】附加官方源历史图表：sessions=${localSnapshot.localUsage.sessionCount}, totalTokens=${localSnapshot.localUsage.totalTokens}`,
+  );
+
+  return {
+    ...officialSnapshot,
+    localUsage: localSnapshot.localUsage,
+    localUsagePrimary: false,
+  };
 }
 
 async function readOfficialCodexSnapshot(): Promise<ProviderUsageSnapshot | null> {

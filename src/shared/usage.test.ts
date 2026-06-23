@@ -227,6 +227,8 @@ describe("normalizeProviderUsage", () => {
         reasoningOutputTokens: 50,
         totalTokens: 5300,
         estimatedCostUsd: 0.00777,
+        weeklyTokens: 4200,
+        dailyTokens: 1200,
         dailyCostUsd: 0.001,
         weeklyCostUsd: 0.006,
         monthlyCostUsd: 0.00777,
@@ -237,6 +239,18 @@ describe("normalizeProviderUsage", () => {
         sessionCount: 2,
         model: "gpt-5.4-mini",
         pricingModel: "gpt-5.4-mini",
+        recentDailyUsage: [
+          {
+            date: "2026-06-22",
+            totalTokens: 3000,
+            costUsd: 0.004,
+          },
+          {
+            date: "2026-06-23",
+            totalTokens: 1200,
+            costUsd: 0.001,
+          },
+        ],
       },
     };
 
@@ -256,10 +270,94 @@ describe("normalizeProviderUsage", () => {
       sourceLabel: "Local Codex data",
       totalTokensLabel: "5.3K tokens",
       estimatedCostLabel: "Estimated cost $0.0078",
+      historyUsageLabel: "History: 5.3K ($0.01)",
+      weeklyUsageLabel: "This week: 4.2K ($0.01)",
+      todayUsageLabel: "Today: 1.2K ($0.00)",
       multiplierLabel: "Provider multiplier x2.0",
       modelLabel: "Pricing model gpt-5.4-mini",
       sessionCountLabel: "2 sessions",
       tokenBreakdownLabel: "Input/cached/output/reasoning 5K / 1.8K / 300 / 50",
+      recentDailyUsage: [
+        {
+          barPercent: 100,
+          costLabel: "$0.00",
+          costUsd: 0.004,
+          dateLabel: "06/22",
+          tokensLabel: "3K",
+          totalTokens: 3000,
+        },
+        {
+          barPercent: 25,
+          costLabel: "$0.00",
+          costUsd: 0.001,
+          dateLabel: "06/23",
+          tokensLabel: "1.2K",
+          totalTokens: 1200,
+        },
+      ],
     });
+  });
+
+  it("keeps official Codex labels when local history is attached as chart data", async () => {
+    const usageModule = await import("./usage");
+    const normalizeProviderUsage = Reflect.get(
+      usageModule,
+      "normalizeProviderUsage",
+    );
+
+    expect(typeof normalizeProviderUsage).toBe("function");
+
+    if (typeof normalizeProviderUsage !== "function") {
+      return;
+    }
+
+    const snapshot: ProviderUsageSnapshot = {
+      provider: "codex",
+      displayName: "Codex",
+      sessionPercent: 14,
+      sessionResetAt: "2026-06-23T10:34:00.000Z",
+      weeklyPercent: 50,
+      weeklyResetAt: "2026-06-25T02:03:00.000Z",
+      lastUpdated: "2026-06-23T02:22:38.325Z",
+      localUsagePrimary: false,
+      localUsage: {
+        source: "codex-local",
+        inputTokens: 5000,
+        cachedInputTokens: 1800,
+        outputTokens: 300,
+        reasoningOutputTokens: 50,
+        totalTokens: 5300,
+        estimatedCostUsd: 0.00777,
+        weeklyTokens: 4200,
+        dailyTokens: 1200,
+        dailyCostUsd: 0.001,
+        weeklyCostUsd: 0.006,
+        monthlyCostUsd: 0.00777,
+        dailyLimitUsd: 10,
+        weeklyLimitUsd: 50,
+        monthlyLimitUsd: 200,
+        providerMultiplier: 2,
+        sessionCount: 2,
+        model: "gpt-5.4-mini",
+        pricingModel: "gpt-5.4-mini",
+        recentDailyUsage: [
+          {
+            date: "2026-06-23",
+            totalTokens: 1200,
+            costUsd: 0.001,
+          },
+        ],
+      },
+    };
+
+    const normalized = normalizeProviderUsage(snapshot, {
+      language: "zh-CN",
+      timeDisplay: "taipei",
+      timeFormat: "24h",
+    });
+
+    expect(normalized.session.label).toBe("每五小时");
+    expect(normalized.weekly.label).toBe("每周");
+    expect(normalized.localUsage?.todayUsageLabel).toBe("今日用量：1.2千（$0.00）");
   });
 });

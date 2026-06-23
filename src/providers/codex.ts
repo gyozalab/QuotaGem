@@ -186,12 +186,24 @@ export function extractLocalCodexUsage(
       ? pricingModels[0]
       : "mixed";
   const increments = sessionSummaries.flatMap((summary) => summary.increments);
+  const weeklyUsage = summarizePeriodUsage(increments, periods.week);
+  const dailyUsage = summarizePeriodUsage(increments, periods.day);
   const dailyCostUsd = estimatePeriodCostUsd(increments, periods.day) *
     providerMultiplier;
   const weeklyCostUsd = estimatePeriodCostUsd(increments, periods.week) *
     providerMultiplier;
   const monthlyCostUsd = estimatePeriodCostUsd(increments, periods.month) *
     providerMultiplier;
+  const recentDailyUsage = getRecentLocalUsageDays(options.now ?? new Date())
+    .map((period) => {
+      const usage = summarizePeriodUsage(increments, period);
+
+      return {
+        date: formatLocalDateKey(period.start),
+        totalTokens: usage.totalTokens,
+        costUsd: usage.costUsd * providerMultiplier,
+      };
+    });
   const localUsage: LocalTokenUsageSnapshot = {
     source: "codex-local",
     ...totals,
@@ -201,6 +213,8 @@ export function extractLocalCodexUsage(
           sum + estimateCodexCostUsd(summary.usage, summary.model),
         0,
       ) * providerMultiplier,
+    weeklyTokens: weeklyUsage.totalTokens,
+    dailyTokens: dailyUsage.totalTokens,
     dailyCostUsd,
     weeklyCostUsd,
     monthlyCostUsd,
@@ -211,6 +225,7 @@ export function extractLocalCodexUsage(
     sessionCount: sessionSummaries.length,
     model: pricingModel,
     pricingModel,
+    recentDailyUsage,
   };
 
   return {
@@ -225,6 +240,7 @@ export function extractLocalCodexUsage(
     lastUpdated: latestSession?.lastUpdated ?? "",
     health: "available",
     localUsage,
+    localUsagePrimary: true,
   };
 }
 
@@ -292,13 +308,12 @@ function extractLocalCodexSessionUsage(
   return {
     lastUpdated: tokenCountEvent.timestamp,
     model: extractLatestModel(events) ?? DEFAULT_CODEX_PRICING_MODEL,
-    increments: extractLocalCodexUsageIncrements(tokenCountEvents, events),
+    increments: extractLocalCodexUsageIncrements(events),
     usage,
   };
 }
 
 function extractLocalCodexUsageIncrements(
-  tokenCountEvents: Array<CodexJsonlEvent & CodexTurnContextEvent>,
   events: Array<CodexJsonlEvent & CodexTurnContextEvent>,
 ): LocalCodexUsageIncrement[] {
   let previousUsage: LocalCodexSessionUsage["usage"] = {
@@ -308,9 +323,21 @@ function extractLocalCodexUsageIncrements(
     reasoningOutputTokens: 0,
     totalTokens: 0,
   };
-  const model = extractLatestModel(events) ?? DEFAULT_CODEX_PRICING_MODEL;
+  let model = DEFAULT_CODEX_PRICING_MODEL;
 
-  return tokenCountEvents.flatMap((event) => {
+  return events.flatMap((event) => {
+    if (
+      event.type === "turn_context" &&
+      typeof event.payload?.model === "string" &&
+      event.payload.model
+    ) {
+      model = event.payload.model;
+    }
+
+    if (event.payload?.type !== "token_count") {
+      return [];
+    }
+
     const usage = event.payload?.info?.total_token_usage
       ? normalizeTokenUsage(event.payload.info.total_token_usage)
       : null;
@@ -391,6 +418,13 @@ function estimatePeriodCostUsd(
   increments: LocalCodexUsageIncrement[],
   period: { start: Date; end: Date },
 ): number {
+  return summarizePeriodUsage(increments, period).costUsd;
+}
+
+function summarizePeriodUsage(
+  increments: LocalCodexUsageIncrement[],
+  period: { start: Date; end: Date },
+): { totalTokens: number; costUsd: number } {
   return increments.reduce((sum, increment) => {
     const timestamp = Date.parse(increment.timestamp);
 
@@ -402,8 +436,11 @@ function estimatePeriodCostUsd(
       return sum;
     }
 
-    return sum + estimateCodexCostUsd(increment.usage, increment.model);
-  }, 0);
+    return {
+      totalTokens: sum.totalTokens + increment.usage.totalTokens,
+      costUsd: sum.costUsd + estimateCodexCostUsd(increment.usage, increment.model),
+    };
+  }, { totalTokens: 0, costUsd: 0 });
 }
 
 export function normalizeCodexUsdLimit(value: number): number {
@@ -447,6 +484,28 @@ function getLocalUsagePeriods(now: Date): {
     week: { start: weekStart, end: weekEnd },
     month: { start: monthStart, end: monthEnd },
   };
+}
+
+function getRecentLocalUsageDays(now: Date): Array<{ start: Date; end: Date }> {
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const start = new Date(todayStart);
+    start.setDate(start.getDate() - (6 - index));
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    return { start, end };
+  });
+}
+
+function formatLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function extractLatestModel(

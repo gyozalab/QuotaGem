@@ -214,6 +214,8 @@ describe("extractLatestCodexUsage", () => {
         outputTokens: 300,
         reasoningOutputTokens: 50,
         totalTokens: 5300,
+        weeklyTokens: 5300,
+        dailyTokens: 5300,
         providerMultiplier: 2,
         sessionCount: 2,
         dailyLimitUsd: 1,
@@ -229,5 +231,12 @@ describe("extractLatestCodexUsage", () => {
     expect(snapshot?.localUsage?.dailyCostUsd).toBeCloseTo(0.03582);
     expect(snapshot?.localUsage?.weeklyCostUsd).toBeCloseTo(0.03582);
     expect(snapshot?.localUsage?.monthlyCostUsd).toBeCloseTo(0.03582);
+    expect(snapshot?.localUsage?.recentDailyUsage).toHaveLength(7);
+    expect(snapshot?.localUsage?.recentDailyUsage.at(-1)).toEqual({
+      date: "2026-06-23",
+      totalTokens: 5300,
+      costUsd: expect.any(Number),
+    });
+    expect(snapshot?.localUsage?.recentDailyUsage.at(-1)?.costUsd).toBeCloseTo(0.03582);
   });
 });

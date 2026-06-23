@@ -24,6 +24,12 @@ describe("i18n", () => {
     expect(t("zh-CN", "settingsClaudeTab")).toBe("Claude");
     expect(t("zh-CN", "generalAppearanceTab")).toBe("外观");
     expect(t("zh-CN", "codexShowRemainingUsage")).toBe("显示剩余用量");
+    expect(t("zh-CN", "expandedPanel")).toBe("小面板");
+    expect(t("zh-CN", "compactPanel")).toBe("大面板");
+    expect(t("zh-CN", "historyUsageSummary", {
+      cost: "$1.23",
+      tokens: "1百万",
+    })).toBe("历史用量：1百万（$1.23）");
   });
 
   it("maps system locales to the expected widget language", () => {
