@@ -69,7 +69,9 @@ export interface AppStoreShape {
   codexDailyLimitUsd?: number;
   codexWeeklyLimitUsd?: number;
   codexMonthlyLimitUsd?: number;
+  claudeShowRemainingUsage?: boolean;
   codexShowRemainingUsage?: boolean;
+  antigravityShowRemainingUsage?: boolean;
 }
 
 interface BuildDashboardStateOptions {
@@ -198,7 +200,11 @@ export async function buildDashboardState(
         dateFormat: store.get("dateFormat", "iso"),
         warningThreshold: thresholds.warningThreshold,
         dangerThreshold: thresholds.dangerThreshold,
-        codexShowRemainingUsage: store.get("codexShowRemainingUsage", false),
+        showRemainingUsageByProvider: {
+          claude: store.get("claudeShowRemainingUsage", false),
+          codex: store.get("codexShowRemainingUsage", false),
+          agy: store.get("antigravityShowRemainingUsage", false),
+        },
       }),
     ),
     lastUpdatedLabel: buildLastUpdatedLabel(snapshotsWithHistory, {
@@ -230,7 +236,12 @@ export async function buildDashboardState(
       codexDailyLimitUsd: store.get("codexDailyLimitUsd", 10),
       codexWeeklyLimitUsd: store.get("codexWeeklyLimitUsd", 50),
       codexMonthlyLimitUsd: store.get("codexMonthlyLimitUsd", 200),
+      claudeShowRemainingUsage: store.get("claudeShowRemainingUsage", false),
       codexShowRemainingUsage: store.get("codexShowRemainingUsage", false),
+      antigravityShowRemainingUsage: store.get(
+        "antigravityShowRemainingUsage",
+        false,
+      ),
     },
   };
 }

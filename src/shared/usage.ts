@@ -182,12 +182,14 @@ export function normalizeProviderUsage(
     warningThreshold?: number;
     dangerThreshold?: number;
     locale?: string;
+    showRemainingUsageByProvider?: Partial<Record<ProviderId, boolean>>;
     codexShowRemainingUsage?: boolean;
   },
 ): NormalizedProviderUsage {
   const thresholds = normalizeUsageThresholds(options);
   const showRemainingUsage =
-    snapshot.provider === "codex" && options.codexShowRemainingUsage === true;
+    options.showRemainingUsageByProvider?.[snapshot.provider] === true ||
+    (snapshot.provider === "codex" && options.codexShowRemainingUsage === true);
   const lang = options.language;
   const isChinese = isChineseLanguage(lang);
 
@@ -228,7 +230,7 @@ export function normalizeProviderUsage(
       ...formatUsageDisplayMetric(
         lang,
         snapshot.thirdPartySessionPercent,
-        false,
+        showRemainingUsage,
       ),
       resetLabel: formatResetDisplay(
         snapshot.thirdPartySessionResetAt ?? null,
@@ -252,7 +254,7 @@ export function normalizeProviderUsage(
       ...formatUsageDisplayMetric(
         lang,
         snapshot.thirdPartyWeeklyPercent,
-        false,
+        showRemainingUsage,
       ),
       resetLabel: formatResetDisplay(
         snapshot.thirdPartyWeeklyResetAt ?? null,

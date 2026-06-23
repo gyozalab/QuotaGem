@@ -196,6 +196,64 @@ describe("normalizeProviderUsage", () => {
     expect(normalized.weekly.displayPercent).toBe(82);
   });
 
+  it("can format non-Codex providers as remaining usage independently", async () => {
+    const usageModule = await import("./usage");
+    const normalizeProviderUsage = Reflect.get(
+      usageModule,
+      "normalizeProviderUsage",
+    );
+
+    expect(typeof normalizeProviderUsage).toBe("function");
+
+    if (typeof normalizeProviderUsage !== "function") {
+      return;
+    }
+
+    const claudeSnapshot: ProviderUsageSnapshot = {
+      provider: "claude",
+      displayName: "Claude",
+      sessionPercent: 35,
+      sessionResetAt: "2026-01-25T05:00:00.000Z",
+      weeklyPercent: 72,
+      weeklyResetAt: "2026-01-31T13:20:00.000Z",
+      lastUpdated: "2026-03-28T02:00:00.000Z",
+    };
+    const agySnapshot: ProviderUsageSnapshot = {
+      provider: "agy",
+      displayName: "Agy",
+      sessionPercent: 20,
+      sessionResetAt: "2026-01-25T05:00:00.000Z",
+      weeklyPercent: 45,
+      weeklyResetAt: "2026-01-31T13:20:00.000Z",
+      thirdPartySessionPercent: 60,
+      thirdPartySessionResetAt: "2026-01-25T05:00:00.000Z",
+      thirdPartyWeeklyPercent: 80,
+      thirdPartyWeeklyResetAt: "2026-01-31T13:20:00.000Z",
+      lastUpdated: "2026-03-28T02:00:00.000Z",
+    };
+
+    const claude = normalizeProviderUsage(claudeSnapshot, {
+      language: "en",
+      timeDisplay: "utc",
+      timeFormat: "24h",
+      showRemainingUsageByProvider: { claude: true },
+    });
+    const agy = normalizeProviderUsage(agySnapshot, {
+      language: "en",
+      timeDisplay: "utc",
+      timeFormat: "24h",
+      showRemainingUsageByProvider: { agy: true },
+    });
+
+    expect(claude.session.percent).toBe(35);
+    expect(claude.session.displayPercent).toBe(65);
+    expect(claude.session.percentLabel).toBe("Remaining 65%");
+    expect(claude.session.barMode).toBe("remaining");
+    expect(agy.session.displayPercent).toBe(80);
+    expect(agy.thirdPartySession?.displayPercent).toBe(40);
+    expect(agy.thirdPartyWeekly?.barMode).toBe("remaining");
+  });
+
   it("formats local Codex token and cost details", async () => {
     const usageModule = await import("./usage");
     const normalizeProviderUsage = Reflect.get(

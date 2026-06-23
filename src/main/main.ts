@@ -81,7 +81,9 @@ const store = new Store<AppStoreShape>({
     codexDailyLimitUsd: 10,
     codexWeeklyLimitUsd: 50,
     codexMonthlyLimitUsd: 200,
+    claudeShowRemainingUsage: false,
     codexShowRemainingUsage: false,
+    antigravityShowRemainingUsage: false,
   },
 });
 
@@ -624,6 +626,14 @@ app.whenReady().then(() => {
       store.set(
         "codexShowRemainingUsage",
         preferences.codexShowRemainingUsage,
+      );
+      store.set(
+        "claudeShowRemainingUsage",
+        preferences.claudeShowRemainingUsage,
+      );
+      store.set(
+        "antigravityShowRemainingUsage",
+        preferences.antigravityShowRemainingUsage,
       );
       syncLaunchAtLoginPreference(
         app,

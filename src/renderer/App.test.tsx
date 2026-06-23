@@ -57,7 +57,9 @@ function createDashboardState(
       codexDailyLimitUsd: 10,
       codexWeeklyLimitUsd: 50,
       codexMonthlyLimitUsd: 200,
+      claudeShowRemainingUsage: false,
       codexShowRemainingUsage: false,
+      antigravityShowRemainingUsage: false,
       ...overrides,
     },
   };
@@ -296,12 +298,43 @@ describe("App", () => {
     expect(
       await screen.findByRole("button", { name: "Connect Claude" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Codex usage is auto-detected from your local desktop data. Claude works best through the login window below.",
+      ),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Antigravity" }));
 
     expect(
       await screen.findByRole("button", { name: "Connect Antigravity" }),
     ).toBeInTheDocument();
+  });
+
+  it("saves remaining-usage display independently for Claude and Antigravity", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    await userEvent.click(screen.getByRole("tab", { name: "Claude" }));
+    await userEvent.click(await screen.findByLabelText("Show remaining usage"));
+
+    await userEvent.click(screen.getByRole("tab", { name: "Antigravity" }));
+    await userEvent.click(await screen.findByLabelText("Show remaining usage"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          claudeShowRemainingUsage: true,
+          codexShowRemainingUsage: false,
+          antigravityShowRemainingUsage: true,
+        }),
+      );
+    });
   });
 
   it("opens the Antigravity connection action from settings", async () => {

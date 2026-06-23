@@ -125,7 +125,6 @@ type TranslationKey =
   | "savedClaudeAccepted"
   | "couldNotSaveClaudeSettings"
   | "recommendedConnectClaude"
-  | "codexAutoDetected"
   | "claudeConnectedSuccessfully"
   | "couldNotConnectClaude"
   | "antigravityConnectStarted"
@@ -233,8 +232,6 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     couldNotSaveClaudeSettings: "Could not save preferences.",
     recommendedConnectClaude:
       "Recommended: press Connect Claude. Use manual credentials only if the login flow does not work.",
-    codexAutoDetected:
-      "Codex usage is auto-detected from your local desktop data. Claude works best through the login window below.",
     claudeConnectedSuccessfully: "Claude connected successfully.",
     couldNotConnectClaude: "Could not connect Claude.",
     antigravityConnectStarted: "Antigravity page opened. Refreshing local data.",
@@ -347,8 +344,6 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     couldNotSaveClaudeSettings: "無法儲存設定。",
     recommendedConnectClaude:
       "建議直接按「連接 Claude」。只有在登入流程失敗時，才需要改用手動憑證。",
-    codexAutoDetected:
-      "Codex 用量會從本機桌面資料自動偵測。Claude 建議使用下方登入視窗來連接。",
     claudeConnectedSuccessfully: "Claude 連接成功。",
     couldNotConnectClaude: "無法連接 Claude。",
     antigravityConnectStarted: "Antigravity 頁面已開啟，正在重新整理本機資料。",
@@ -460,8 +455,6 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     couldNotSaveClaudeSettings: "无法保存设置。",
     recommendedConnectClaude:
       "建议直接按“连接 Claude”。只有在登录流程失败时，才需要改用手动凭证。",
-    codexAutoDetected:
-      "Codex 用量会从本地桌面数据自动检测。Claude 建议使用下方登录窗口来连接。",
     claudeConnectedSuccessfully: "Claude 连接成功。",
     couldNotConnectClaude: "无法连接 Claude。",
     antigravityConnectStarted: "Antigravity 页面已打开，正在刷新本地数据。",

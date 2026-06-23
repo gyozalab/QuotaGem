@@ -146,7 +146,9 @@ function UsageDashboardApp() {
       codexDailyLimitUsd: 10,
       codexWeeklyLimitUsd: 50,
       codexMonthlyLimitUsd: 200,
+      claudeShowRemainingUsage: false,
       codexShowRemainingUsage: false,
+      antigravityShowRemainingUsage: false,
     },
   });
   const [loading, setLoading] = useState(true);
@@ -757,9 +759,19 @@ function UsageDashboardApp() {
                 role="tabpanel"
               >
                 <p className="settings-sheet__hint">{t(language, "claudeSettingsHint")}</p>
-                <p className="settings-sheet__copy">
-                  {t(language, "codexAutoDetected")}
-                </p>
+                <label className="checkbox-row">
+                  <span>{t(language, "codexShowRemainingUsage")}</span>
+                  <input
+                    type="checkbox"
+                    checked={draftPreferences.claudeShowRemainingUsage}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        claudeShowRemainingUsage: event.target.checked,
+                      }));
+                    }}
+                  />
+                </label>
                 <p className="settings-sheet__hint">
                   {t(language, "recommendedConnectClaude")}
                 </p>
@@ -804,6 +816,19 @@ function UsageDashboardApp() {
                 role="tabpanel"
               >
                 <p className="settings-sheet__hint">{t(language, "antigravitySettingsHint")}</p>
+                <label className="checkbox-row">
+                  <span>{t(language, "codexShowRemainingUsage")}</span>
+                  <input
+                    type="checkbox"
+                    checked={draftPreferences.antigravityShowRemainingUsage}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        antigravityShowRemainingUsage: event.target.checked,
+                      }));
+                    }}
+                  />
+                </label>
                 <div className="settings-actions settings-actions--top">
                   <button
                     className="icon-button"
