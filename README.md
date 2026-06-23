@@ -65,7 +65,9 @@ QuotaGem 想解決的是很簡單的一件事：
 
 ## 下載使用
 
-前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的安裝檔（`QuotaGem_*_x64-setup.exe` 或 `QuotaGem_*_x64_en-US.msi`），執行後依指示安裝即可。安裝後可在設定面板開啟開機自啟。
+前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的免安裝版（`QuotaGem_*_x64-portable.zip`）。解壓縮後執行 `quotagem.exe`，需要跟著 Windows 啟動時，再到設定面板開啟開機自啟。
+
+目前 Windows 發佈建議以免安裝版為主；安裝器會等程式碼簽章與 Microsoft Defender 誤判申訴穩定後再作為預設下載。開機自啟會指向目前執行的 `quotagem.exe` 路徑；如果你搬動 exe，從新位置執行一次即可更新 Windows 開機啟動項。
 
 ## 開發者
 
@@ -76,5 +78,6 @@ git clone https://github.com/gyozalab/QuotaGem.git
 cd QuotaGem
 npm install
 npx tauri dev      # 開發模式
-npx tauri build    # 打包安裝檔（MSI + NSIS）
+npx tauri build    # 建置 app 與 Windows bundle
+npm run package:portable
 ```

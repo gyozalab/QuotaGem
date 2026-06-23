@@ -65,7 +65,9 @@ Under the hood it is built on Tauri (Rust + the system WebView2), so the install
 
 ## Download
 
-Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest installer (`QuotaGem_*_x64-setup.exe` or `QuotaGem_*_x64_en-US.msi`), then follow the prompts. You can enable launch-at-login from the settings panel.
+Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest portable package (`QuotaGem_*_x64-portable.zip`). Extract it, run `quotagem.exe`, and enable launch-at-login from the settings panel if you want QuotaGem to start with Windows.
+
+The portable build is the recommended Windows artifact until the installer is code-signed and its Microsoft Defender reputation is settled. Launch-at-login points to the current `quotagem.exe` path; if you move the app, run it once from the new location to refresh the Windows startup entry.
 
 ## For Developers
 
@@ -76,9 +78,10 @@ git clone https://github.com/gyozalab/QuotaGem.git
 cd QuotaGem
 npm install
 npx tauri dev      # development
-npx tauri build    # package installers (MSI + NSIS)
+npx tauri build    # build the app and Windows bundles
+npm run package:portable
 ```
 
 ## Status
 
-The Tauri 2.0 rewrite is feature-complete: all three providers, both panels, settings, alerts, themes, i18n, and launch-at-login are in place and packaged as MSI/NSIS installers.
+The Tauri 2.0 rewrite is feature-complete: all three providers, both panels, settings, alerts, themes, i18n, launch-at-login, and single-instance startup protection are in place. Portable zip is the recommended release artifact for now; MSI/NSIS installers are built but should wait for signing and Defender false-positive review before being promoted as the default download.

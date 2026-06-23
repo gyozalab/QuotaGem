@@ -206,6 +206,7 @@ async fn refresh_usage(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
     .plugin(tauri_plugin_autostart::Builder::default().build())
     .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())

@@ -10,6 +10,8 @@
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
     "tauri": "tauri",
+    "tauri:build": "tauri build",
+    "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
     "package": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --x64"
   },
   "build": {
