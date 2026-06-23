@@ -25,4 +25,12 @@ describe("renderer styles", () => {
     expect(css).toMatch(/\.panel-header__mark\s*\{[^}]*width:\s*18px;/s);
     expect(css).toMatch(/\.panel-header__mark\s*\{[^}]*height:\s*18px;/s);
   });
+
+  it("stacks the expanded header meta under the title to keep spacing readable", () => {
+    const css = readFileSync(resolve(__dirname, "styles.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.panel-header__identity\s*\{[^}]*display:\s*grid;[^}]*gap:\s*4px;/s,
+    );
+  });
 });

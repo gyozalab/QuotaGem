@@ -43,6 +43,7 @@ import {
   normalizeCodexProviderMultiplier,
   normalizeCodexUsdLimit,
 } from "../providers/codex";
+import type { ProviderId } from "../shared/usage";
 
 let expandedWindow: BrowserWindow | null = null;
 let compactWindow: BrowserWindow | null = null;
@@ -448,9 +449,29 @@ function processUsageAlerts(state: UsageDashboardState): void {
 }
 
 async function fetchDashboardState(): Promise<UsageDashboardState> {
-  const state = await buildDashboardState(store, getLaunchAtLoginPreference());
+  const state = await buildDashboardState(
+    store,
+    getLaunchAtLoginPreference(),
+    {
+      visibleProviders: getVisibleProviderIds(),
+    },
+  );
   processUsageAlerts(state);
   return state;
+}
+
+function getVisibleProviderIds(): ProviderId[] {
+  const visibility = store.get("providerVisibility", "both");
+
+  if (visibility === "claude") {
+    return ["claude"];
+  }
+
+  if (visibility === "codex") {
+    return ["codex"];
+  }
+
+  return ["claude", "codex", "agy"];
 }
 
 function positionWindow(
@@ -592,7 +613,9 @@ app.whenReady().then(() => {
       syncWindowLayouts();
 
       broadcastRefresh();
-      return buildDashboardState(store, getLaunchAtLoginPreference());
+      return buildDashboardState(store, getLaunchAtLoginPreference(), {
+        visibleProviders: getVisibleProviderIds(),
+      });
     },
   );
 

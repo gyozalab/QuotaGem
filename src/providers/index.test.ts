@@ -54,4 +54,55 @@ describe("loadProviderSnapshots", () => {
       },
     ]);
   });
+
+  it("returns unavailable when a provider reader times out", async () => {
+    const providersModule = await import("./index");
+    const loadProviderSnapshots = Reflect.get(
+      providersModule,
+      "loadProviderSnapshots",
+    );
+
+    expect(typeof loadProviderSnapshots).toBe("function");
+
+    if (typeof loadProviderSnapshots !== "function") {
+      return;
+    }
+
+    vi.useFakeTimers();
+
+    try {
+      const snapshotsPromise = loadProviderSnapshots(
+        [
+          {
+            provider: "claude",
+            displayName: "Claude",
+            read: async () =>
+              new Promise<ProviderUsageSnapshot | null>(() => undefined),
+          },
+        ],
+        {
+          timeoutMsByProvider: {
+            claude: 50,
+          },
+        },
+      );
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      await expect(snapshotsPromise).resolves.toEqual([
+        {
+          provider: "claude",
+          displayName: "Claude",
+          sessionPercent: 0,
+          sessionResetAt: null,
+          weeklyPercent: 0,
+          weeklyResetAt: null,
+          lastUpdated: "",
+          health: "unavailable",
+        },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

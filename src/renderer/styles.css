@@ -127,8 +127,23 @@ select {
 }
 
 .panel-header {
-  min-height: 30px;
+  min-height: 40px;
   gap: 8px;
+  align-items: flex-start;
+}
+
+.panel-header__identity {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 4px;
+}
+
+.panel-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .panel-header__meta-group {

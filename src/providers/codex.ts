@@ -76,19 +76,27 @@ const CODEX_MODEL_PRICES_USD_PER_1M: Record<
 export function extractLatestCodexUsage(
   jsonl: string,
 ): ProviderUsageSnapshot | null {
-  const tokenCountEvent = jsonl
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .flatMap((line) => {
-      try {
-        return [JSON.parse(line) as CodexJsonlEvent];
-      } catch {
-        return [];
+  const lines = jsonl.split(/\r?\n/u);
+  let tokenCountEvent: CodexJsonlEvent | undefined;
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index]?.trim();
+
+    if (!line) {
+      continue;
+    }
+
+    try {
+      const event = JSON.parse(line) as CodexJsonlEvent;
+
+      if (event.payload?.type === "token_count") {
+        tokenCountEvent = event;
+        break;
       }
-    })
-    .reverse()
-    .find((event) => event.payload?.type === "token_count");
+    } catch {
+      continue;
+    }
+  }
 
   if (!tokenCountEvent?.payload?.rate_limits?.primary) {
     return null;

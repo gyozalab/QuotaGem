@@ -15,7 +15,7 @@ import {
   normalizeCodexProviderMultiplier,
 } from "../providers/codex";
 import { extractLatestAgyUsage } from "../providers/agy";
-import { loadProviderSnapshots } from "../providers";
+import { loadProviderSnapshots, type ProviderReader } from "../providers";
 import type {
   CodexDataSource,
   DateFormatPreference,
@@ -32,6 +32,7 @@ import {
   formatDateParts,
   normalizeProviderUsage,
   normalizeUsageThresholds,
+  type ProviderId,
   type ProviderUsageSnapshot,
 } from "../shared/usage";
 import { resolveClaudeDebugPath } from "./runtime-paths";
@@ -61,6 +62,10 @@ export interface AppStoreShape {
   codexMonthlyLimitUsd?: number;
 }
 
+interface BuildDashboardStateOptions {
+  visibleProviders?: ProviderId[];
+}
+
 const CLAUDE_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
 
@@ -80,13 +85,17 @@ export function primeClaudeSession(): void {
 export async function buildDashboardState(
   store: Store<AppStoreShape>,
   launchAtLogin = store.get("launchAtLogin", false),
+  options: BuildDashboardStateOptions = {},
 ): Promise<UsageDashboardState> {
   const thresholds = normalizeUsageThresholds({
     warningThreshold: store.get("warningThreshold", 75),
     dangerThreshold: store.get("dangerThreshold", 90),
   });
   const language = normalizeWidgetLanguage(store.get("language", "en"));
-  const snapshots = await loadProviderSnapshots([
+  const requestedProviders = new Set(
+    options.visibleProviders ?? ["claude", "codex", "agy"],
+  );
+  const allReaders: ProviderReader[] = [
     {
       provider: "claude",
       displayName: "Claude",
@@ -102,7 +111,15 @@ export async function buildDashboardState(
       displayName: "agy",
       read: readAgySnapshot,
     },
-  ]);
+  ];
+  const readers = allReaders.filter((reader) =>
+    requestedProviders.has(reader.provider),
+  );
+  const snapshots = await loadProviderSnapshots(readers, {
+    timeoutMsByProvider: {
+      claude: 8000,
+    },
+  });
 
   return {
     providers: snapshots.map((snapshot) =>
@@ -160,14 +177,31 @@ async function readCodexSnapshot(
 
 async function readOfficialCodexSnapshot(): Promise<ProviderUsageSnapshot | null> {
   const sessionsRoot = path.join(os.homedir(), ".codex", "sessions");
+  const startedAt = Date.now();
+  console.info(`【Codex官方数据】开始读取：sessionsRoot=${sessionsRoot}`);
   const latestFile = await findNewestJsonlFile(sessionsRoot);
 
   if (!latestFile) {
+    console.info(
+      `【Codex官方数据】读取失败：reason=no-jsonl-file, sessionsRoot=${sessionsRoot}, elapsedMs=${Date.now() - startedAt}`,
+    );
     return null;
   }
 
   const content = await fs.readFile(latestFile, "utf8");
-  return extractLatestCodexUsage(content);
+  const snapshot = extractLatestCodexUsage(content);
+
+  if (snapshot) {
+    console.info(
+      `【Codex官方数据】读取成功：file=${latestFile}, sessionPercent=${snapshot.sessionPercent.toFixed(2)}, weeklyPercent=${snapshot.weeklyPercent.toFixed(2)}, elapsedMs=${Date.now() - startedAt}`,
+    );
+  } else {
+    console.info(
+      `【Codex官方数据】读取失败：reason=no-token-count-event, file=${latestFile}, elapsedMs=${Date.now() - startedAt}`,
+    );
+  }
+
+  return snapshot;
 }
 
 async function readLocalCodexSnapshot(
