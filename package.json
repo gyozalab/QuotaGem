@@ -1,6 +1,6 @@
 {
   "name": "quota-gem",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Windows tray utility for unified Codex and Claude usage visibility under the QuotaGem brand.",
   "main": "dist-electron/main.js",
   "scripts": {
