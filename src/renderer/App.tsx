@@ -25,7 +25,7 @@ import "./styles.css";
 
 type SurfaceMode = "expanded" | "compact";
 type AppView = "dashboard" | "login";
-type SettingsTab = "general" | "codex" | "claude";
+type SettingsTab = "general" | "codex" | "claude" | "antigravity";
 type GeneralSettingsTab = "behavior" | "alerts" | "time" | "appearance";
 
 function clamp(value: number, min: number, max: number) {
@@ -60,6 +60,30 @@ const DEFAULT_PROVIDERS: NormalizedProviderUsage[] = [
   {
     provider: "codex",
     displayName: "Codex",
+    health: "unavailable",
+    session: {
+      label: "Session",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    weekly: {
+      label: "Weekly",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    lastUpdated: "",
+  },
+  {
+    provider: "agy",
+    displayName: "Agy",
     health: "unavailable",
     session: {
       label: "Session",
@@ -131,6 +155,7 @@ function UsageDashboardApp() {
   const [generalSettingsTab, setGeneralSettingsTab] = useState<GeneralSettingsTab>("behavior");
   const [settingsNotice, setSettingsNotice] = useState("");
   const [connectingClaude, setConnectingClaude] = useState(false);
+  const [connectingAntigravity, setConnectingAntigravity] = useState(false);
   const [draftPreferences, setDraftPreferences] = useState(
     dashboardState.preferences,
   );
@@ -313,6 +338,18 @@ function UsageDashboardApp() {
               >
                 {t(language, "settingsClaudeTab")}
               </button>
+              <button
+                className={`settings-tab${settingsTab === "antigravity" ? " settings-tab--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={settingsTab === "antigravity"}
+                aria-controls="settings-tabpanel-antigravity"
+                onClick={() => {
+                  setSettingsTab("antigravity");
+                }}
+              >
+                {t(language, "settingsAntigravityTab")}
+              </button>
             </div>
             {settingsTab === "general" ? (
               <section
@@ -432,6 +469,7 @@ function UsageDashboardApp() {
                         <option value="both">{t(language, "bothProviders")}</option>
                         <option value="claude">{t(language, "claudeOnly")}</option>
                         <option value="codex">{t(language, "codexOnly")}</option>
+                        <option value="agy">{t(language, "agyOnly")}</option>
                       </select>
                     </label>
                     <label className="settings-field">
@@ -755,6 +793,47 @@ function UsageDashboardApp() {
                     {connectingClaude
                       ? t(language, "waitingForClaudeLogin")
                       : t(language, "connectClaude")}
+                  </button>
+                </div>
+              </section>
+            ) : null}
+            {settingsTab === "antigravity" ? (
+              <section
+                className="settings-tabpanel"
+                id="settings-tabpanel-antigravity"
+                role="tabpanel"
+              >
+                <p className="settings-sheet__hint">{t(language, "antigravitySettingsHint")}</p>
+                <div className="settings-actions settings-actions--top">
+                  <button
+                    className="icon-button"
+                    type="button"
+                    disabled={connectingAntigravity}
+                    onClick={() => {
+                      setSettingsNotice("");
+                      setConnectingAntigravity(true);
+                      void window.trayUsageWidget
+                        .connectAntigravity()
+                        .then((nextState) => {
+                          setSettingsNotice(t(language, "antigravityConnectStarted"));
+                          setDashboardState(nextState);
+                          setDraftPreferences(nextState.preferences);
+                        })
+                        .catch((error: unknown) => {
+                          const message =
+                            error instanceof Error
+                              ? error.message
+                              : t(language, "couldNotConnectAntigravity");
+                          setSettingsNotice(message);
+                        })
+                        .finally(() => {
+                          setConnectingAntigravity(false);
+                        });
+                    }}
+                  >
+                    {connectingAntigravity
+                      ? t(language, "openingAntigravity")
+                      : t(language, "connectAntigravity")}
                   </button>
                 </div>
               </section>

@@ -3,7 +3,7 @@ import type { PanelScalePercent } from "./panel-scale";
 import type { PanelTone } from "./panel-themes";
 import type { NormalizedProviderUsage } from "./usage";
 
-export type ProviderVisibility = "both" | "claude" | "codex";
+export type ProviderVisibility = "both" | "claude" | "codex" | "agy";
 export type DateFormatPreference = "iso" | "mdy" | "dmy";
 export type CodexDataSource = "official" | "local";
 

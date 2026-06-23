@@ -74,6 +74,7 @@ describe("App", () => {
       openCompactPanel: vi.fn().mockResolvedValue(undefined),
       closePanels: vi.fn().mockResolvedValue(undefined),
       connectClaude: vi.fn().mockResolvedValue(state),
+      connectAntigravity: vi.fn().mockResolvedValue(state),
       saveSettings: vi.fn().mockImplementation(async (preferences) =>
         createDashboardState(preferences),
       ),
@@ -247,7 +248,33 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("organizes settings into General, Codex, and Claude tabs", async () => {
+  it("lets people show only Antigravity from provider visibility", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    const providerVisibility = await screen.findByLabelText("Show providers");
+
+    expect(screen.getByRole("option", { name: "Show all" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Antigravity only" }),
+    ).toBeInTheDocument();
+
+    await userEvent.selectOptions(providerVisibility, "agy");
+    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerVisibility: "agy",
+        }),
+      );
+    });
+  });
+
+  it("organizes settings into General, Codex, Claude, and Antigravity tabs", async () => {
     render(<App />);
 
     await userEvent.click(
@@ -269,6 +296,30 @@ describe("App", () => {
     expect(
       await screen.findByRole("button", { name: "Connect Claude" }),
     ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Antigravity" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Connect Antigravity" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the Antigravity connection action from settings", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("tab", { name: "Antigravity" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Connect Antigravity" }),
+    );
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.connectAntigravity).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("splits General settings into Behavior, Alerts, Time, and Appearance subtabs", async () => {

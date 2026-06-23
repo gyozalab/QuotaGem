@@ -14,6 +14,9 @@ describe("i18n", () => {
     expect(t("en", "openSettings")).toBeTruthy();
     expect(t("en", "panelScale")).toBeTruthy();
     expect(t("en", "dateFormat")).toBeTruthy();
+    expect(t("en", "settingsAntigravityTab")).toBe("Antigravity");
+    expect(t("en", "bothProviders")).toBe("Show all");
+    expect(t("en", "agyOnly")).toBe("Antigravity only");
   });
 
   it("provides Simplified Chinese labels", () => {
@@ -22,7 +25,10 @@ describe("i18n", () => {
     expect(t("zh-CN", "codexDataSourceLocal")).toBe("本地数据");
     expect(t("zh-CN", "settingsGeneralTab")).toBe("通用");
     expect(t("zh-CN", "settingsClaudeTab")).toBe("Claude");
+    expect(t("zh-CN", "settingsAntigravityTab")).toBe("Antigravity");
     expect(t("zh-CN", "generalAppearanceTab")).toBe("外观");
+    expect(t("zh-CN", "bothProviders")).toBe("显示所有");
+    expect(t("zh-CN", "agyOnly")).toBe("只显示 Antigravity");
     expect(t("zh-CN", "codexShowRemainingUsage")).toBe("显示剩余用量");
     expect(t("zh-CN", "expandedPanel")).toBe("小面板");
     expect(t("zh-CN", "compactPanel")).toBe("大面板");

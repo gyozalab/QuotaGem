@@ -42,7 +42,7 @@ export interface AppStoreShape {
   claudeOrganizationId?: string;
   preferredDisplayMode?: "expanded" | "compact";
   launchAtLogin?: boolean;
-  providerVisibility?: "both" | "claude" | "codex";
+  providerVisibility?: "both" | "claude" | "codex" | "agy";
   refreshIntervalMinutes?: number;
   warningThreshold?: number;
   dangerThreshold?: number;
@@ -109,7 +109,7 @@ export async function buildDashboardState(
     },
     {
       provider: "agy",
-      displayName: "agy",
+      displayName: "Agy",
       read: readAgySnapshot,
     },
   ];

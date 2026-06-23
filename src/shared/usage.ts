@@ -159,7 +159,6 @@ export function normalizeProviderUsage(
   },
 ): NormalizedProviderUsage {
   const thresholds = normalizeUsageThresholds(options);
-  const isAgy = snapshot.provider === "agy";
   const showRemainingUsage =
     snapshot.provider === "codex" && options.codexShowRemainingUsage === true;
   const lang = options.language;
@@ -167,14 +166,10 @@ export function normalizeProviderUsage(
 
   const isLocalUsagePrimary =
     Boolean(snapshot.localUsage) && snapshot.localUsagePrimary !== false;
-  const sessionLabel = isAgy
-    ? (isChinese ? (lang === "zh-CN" ? "Gemini 5小时" : "Gemini 5小時") : "Gemini 5h")
-    : isLocalUsagePrimary
+  const sessionLabel = isLocalUsagePrimary
       ? (isChinese ? "每日" : "Daily")
-    : t(lang, "session");
-  const weeklyLabel = isAgy
-    ? (isChinese ? (lang === "zh-CN" ? "Gemini 每周" : "Gemini 每週") : "Gemini Weekly")
-    : t(lang, "weekly");
+      : t(lang, "session");
+  const weeklyLabel = t(lang, "weekly");
   const monthly = snapshot.monthlyPercent !== undefined
     ? {
         label: isChinese ? "每月" : "Monthly",

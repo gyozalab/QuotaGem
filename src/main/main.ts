@@ -7,6 +7,7 @@ import {
   Notification,
   screen,
   session,
+  shell,
   Tray,
 } from "electron";
 import Store from "electron-store";
@@ -53,6 +54,7 @@ let refreshTimer: NodeJS.Timeout | null = null;
 let usageAlertsPrimed = false;
 
 const WINDOW_MARGIN = 14;
+const ANTIGRAVITY_URL = "https://antigravity.google/";
 const launchAtLoginRuntime = getLaunchAtLoginRuntime();
 let expandedWindowHeight = getExpandedBaseSize().height;
 const usageAlertTracker = createUsageAlertTracker();
@@ -472,6 +474,10 @@ function getVisibleProviderIds(): ProviderId[] {
     return ["codex"];
   }
 
+  if (visibility === "agy") {
+    return ["agy"];
+  }
+
   return ["claude", "codex", "agy"];
 }
 
@@ -559,6 +565,16 @@ app.whenReady().then(() => {
     } catch (error) {
       throw new Error(formatClaudeCredentialError(error));
     }
+  });
+
+  ipcMain.handle("antigravity:connect", async () => {
+    console.info(`【Antigravity连接】打开官方页面：url=${ANTIGRAVITY_URL}`);
+    await shell.openExternal(ANTIGRAVITY_URL);
+    console.info("【Antigravity连接】官方页面已打开，刷新仪表板状态");
+
+    return buildDashboardState(store, getLaunchAtLoginPreference(), {
+      visibleProviders: getVisibleProviderIds(),
+    });
   });
 
   ipcMain.handle(

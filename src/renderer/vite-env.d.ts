@@ -14,6 +14,7 @@ declare global {
       openCompactPanel: () => Promise<void>;
       closePanels: () => Promise<void>;
       connectClaude: () => Promise<UsageDashboardState>;
+      connectAntigravity: () => Promise<UsageDashboardState>;
       saveSettings: (
         preferences: UsageDashboardState["preferences"],
       ) => Promise<UsageDashboardState>;

@@ -52,6 +52,30 @@ const providers: NormalizedProviderUsage[] = [
     },
     lastUpdated: "2026-03-30T01:00:00.000Z",
   },
+  {
+    provider: "agy",
+    displayName: "Agy",
+    health: "available",
+    session: {
+      label: "Session",
+      percent: 8,
+      displayPercent: 8,
+      percentLabel: "8%",
+      barMode: "used",
+      resetLabel: "Soon",
+      level: "normal",
+    },
+    weekly: {
+      label: "Weekly",
+      percent: 16,
+      displayPercent: 16,
+      percentLabel: "16%",
+      barMode: "used",
+      resetLabel: "Later",
+      level: "normal",
+    },
+    lastUpdated: "2026-03-30T01:00:00.000Z",
+  },
 ];
 
 describe("filterProvidersByVisibility", () => {
@@ -65,5 +89,9 @@ describe("filterProvidersByVisibility", () => {
 
   it("returns only Codex when visibility is codex", () => {
     expect(filterProvidersByVisibility(providers, "codex")).toEqual([providers[1]]);
+  });
+
+  it("returns only Antigravity when visibility is agy", () => {
+    expect(filterProvidersByVisibility(providers, "agy")).toEqual([providers[2]]);
   });
 });

@@ -52,6 +52,8 @@ type TranslationKey =
   | "settings"
   | "closeSettings"
   | "connectClaude"
+  | "connectAntigravity"
+  | "openingAntigravity"
   | "waitingForClaudeLogin"
   | "preferredDisplayMode"
   | "launchAtLogin"
@@ -71,6 +73,7 @@ type TranslationKey =
   | "settingsGeneralTab"
   | "settingsCodexTab"
   | "settingsClaudeTab"
+  | "settingsAntigravityTab"
   | "generalSettingsHint"
   | "generalBehaviorTab"
   | "generalAlertsTab"
@@ -78,11 +81,13 @@ type TranslationKey =
   | "generalAppearanceTab"
   | "codexSettingsHint"
   | "claudeSettingsHint"
+  | "antigravitySettingsHint"
   | "expandedPanel"
   | "compactPanel"
   | "bothProviders"
   | "claudeOnly"
   | "codexOnly"
+  | "agyOnly"
   | "refreshInterval"
   | "warningThreshold"
   | "dangerThreshold"
@@ -121,6 +126,8 @@ type TranslationKey =
   | "codexAutoDetected"
   | "claudeConnectedSuccessfully"
   | "couldNotConnectClaude"
+  | "antigravityConnectStarted"
+  | "couldNotConnectAntigravity"
   | "language"
   | "english"
   | "traditionalChinese"
@@ -154,6 +161,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settings: "Settings",
     closeSettings: "Close settings",
     connectClaude: "Connect Claude",
+    connectAntigravity: "Connect Antigravity",
+    openingAntigravity: "Opening Antigravity...",
     waitingForClaudeLogin: "Waiting for Claude login...",
     preferredDisplayMode: "Default panel to open",
     launchAtLogin: "Launch on Windows sign-in",
@@ -170,6 +179,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settingsGeneralTab: "General",
     settingsCodexTab: "Codex",
     settingsClaudeTab: "Claude",
+    settingsAntigravityTab: "Antigravity",
     generalSettingsHint: "Choose how the widget behaves, looks, and refreshes.",
     generalBehaviorTab: "Behavior",
     generalAlertsTab: "Alerts",
@@ -177,11 +187,14 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     generalAppearanceTab: "Appearance",
     codexSettingsHint: "Choose the Codex data source and local pricing rules.",
     claudeSettingsHint: "Connect Claude through the login window and manage Claude here.",
+    antigravitySettingsHint:
+      "Open Google Antigravity to sign in or install it. QuotaGem will keep reading Antigravity usage from the local monitor data when available.",
     expandedPanel: "Compact panel",
     compactPanel: "Expanded panel",
-    bothProviders: "Claude + Codex",
+    bothProviders: "Show all",
     claudeOnly: "Claude only",
     codexOnly: "Codex only",
+    agyOnly: "Antigravity only",
     refreshInterval: "Refresh interval",
     warningThreshold: "Warning threshold",
     dangerThreshold: "Danger threshold",
@@ -222,6 +235,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
       "Codex usage is auto-detected from your local desktop data. Claude works best through the login window below.",
     claudeConnectedSuccessfully: "Claude connected successfully.",
     couldNotConnectClaude: "Could not connect Claude.",
+    antigravityConnectStarted: "Antigravity page opened. Refreshing local data.",
+    couldNotConnectAntigravity: "Could not open Antigravity.",
     language: "Language",
     english: "English",
     traditionalChinese: "Traditional Chinese",
@@ -257,6 +272,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settings: "設定",
     closeSettings: "關閉設定",
     connectClaude: "連接 Claude",
+    connectAntigravity: "連接 Antigravity",
+    openingAntigravity: "正在開啟 Antigravity...",
     waitingForClaudeLogin: "等待 Claude 登入中...",
     preferredDisplayMode: "預設開啟面板",
     launchAtLogin: "Windows 登入時啟動",
@@ -273,6 +290,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settingsGeneralTab: "通用",
     settingsCodexTab: "Codex",
     settingsClaudeTab: "Claude",
+    settingsAntigravityTab: "Antigravity",
     generalSettingsHint: "調整面板行為、外觀與更新方式。",
     generalBehaviorTab: "行為",
     generalAlertsTab: "提醒",
@@ -280,11 +298,14 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     generalAppearanceTab: "外觀",
     codexSettingsHint: "選擇 Codex 資料來源與本機成本換算規則。",
     claudeSettingsHint: "透過登入視窗連接 Claude，並在這裡管理相關設定。",
+    antigravitySettingsHint:
+      "開啟 Google Antigravity 進行登入或安裝。可用時，QuotaGem 會繼續從本機監測資料讀取 Antigravity 用量。",
     expandedPanel: "小面板",
     compactPanel: "大面板",
-    bothProviders: "Claude + Codex",
+    bothProviders: "顯示所有",
     claudeOnly: "只顯示 Claude",
     codexOnly: "只顯示 Codex",
+    agyOnly: "只顯示 Antigravity",
     refreshInterval: "更新頻率",
     warningThreshold: "警示門檻",
     dangerThreshold: "危險門檻",
@@ -325,6 +346,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
       "Codex 用量會從本機桌面資料自動偵測。Claude 建議使用下方登入視窗來連接。",
     claudeConnectedSuccessfully: "Claude 連接成功。",
     couldNotConnectClaude: "無法連接 Claude。",
+    antigravityConnectStarted: "Antigravity 頁面已開啟，正在重新整理本機資料。",
+    couldNotConnectAntigravity: "無法開啟 Antigravity。",
     language: "語言",
     english: "English",
     traditionalChinese: "繁體中文",
@@ -360,6 +383,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settings: "设置",
     closeSettings: "关闭设置",
     connectClaude: "连接 Claude",
+    connectAntigravity: "连接 Antigravity",
+    openingAntigravity: "正在打开 Antigravity...",
     waitingForClaudeLogin: "等待 Claude 登录中...",
     preferredDisplayMode: "默认打开面板",
     launchAtLogin: "Windows 登录时启动",
@@ -376,6 +401,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     settingsGeneralTab: "通用",
     settingsCodexTab: "Codex",
     settingsClaudeTab: "Claude",
+    settingsAntigravityTab: "Antigravity",
     generalSettingsHint: "调整面板行为、外观与刷新方式。",
     generalBehaviorTab: "行为",
     generalAlertsTab: "提醒",
@@ -383,11 +409,14 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     generalAppearanceTab: "外观",
     codexSettingsHint: "选择 Codex 数据来源与本地成本换算规则。",
     claudeSettingsHint: "通过登录窗口连接 Claude，并在这里管理相关设置。",
+    antigravitySettingsHint:
+      "打开 Google Antigravity 进行登录或安装。可用时，QuotaGem 会继续从本地监测数据读取 Antigravity 用量。",
     expandedPanel: "小面板",
     compactPanel: "大面板",
-    bothProviders: "Claude + Codex",
+    bothProviders: "显示所有",
     claudeOnly: "只显示 Claude",
     codexOnly: "只显示 Codex",
+    agyOnly: "只显示 Antigravity",
     refreshInterval: "更新频率",
     warningThreshold: "警告阈值",
     dangerThreshold: "危险阈值",
@@ -428,6 +457,8 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
       "Codex 用量会从本地桌面数据自动检测。Claude 建议使用下方登录窗口来连接。",
     claudeConnectedSuccessfully: "Claude 连接成功。",
     couldNotConnectClaude: "无法连接 Claude。",
+    antigravityConnectStarted: "Antigravity 页面已打开，正在刷新本地数据。",
+    couldNotConnectAntigravity: "无法打开 Antigravity。",
     language: "语言",
     english: "English",
     traditionalChinese: "繁體中文",
