@@ -150,6 +150,8 @@ select {
   min-height: 40px;
   gap: 8px;
   align-items: flex-start;
+  padding: 6px 0 4px;
+  margin: -6px 0 -4px;
 }
 
 .panel-header__identity {
@@ -190,6 +192,17 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.panel-header__brand,
+.header-meta,
+.compact-widget__brand,
+.compact-widget__meta,
+.provider-card__title,
+.provider-card__header p,
+.compact-provider__title,
+.compact-provider__health {
+  user-select: none;
 }
 
 .panel-header__actions {
@@ -463,6 +476,10 @@ select {
   gap: 10px;
   min-height: 28px;
   padding-right: 172px;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  margin-top: -8px;
+  margin-bottom: -6px;
 }
 
 .compact-widget__identity {
@@ -786,7 +803,7 @@ select {
   left: 14px;
   right: 14px;
   bottom: 14px;
-  border-radius: 22px;
+  border-radius: 18px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -864,6 +881,20 @@ select {
 .settings-tab:hover {
   background: rgba(var(--panel-tab-rgb), 0.2);
   color: rgba(var(--panel-text-rgb), 0.96);
+}
+
+.settings-sheet__header {
+  -webkit-app-region: drag;
+  padding: 8px 0 6px;
+  margin: -8px 0 -2px;
+}
+
+.settings-sheet__header h2,
+.settings-tabs,
+.settings-subtabs,
+.settings-field > span,
+.settings-sheet__hint {
+  user-select: none;
 }
 
 .settings-tab--active {
@@ -1051,7 +1082,7 @@ select {
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid rgba(var(--panel-border-rgb), 0.08);
-  border-radius: 0 0 22px 22px;
+  border-radius: 0 0 18px 18px;
   box-shadow: 0 -8px 18px rgba(var(--panel-shadow-rgb), 0.06);
   background:
     linear-gradient(180deg, rgba(var(--panel-base-rgb), 0.992), rgba(var(--panel-base-rgb), 0.996));
