@@ -13,7 +13,17 @@
 
 <img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
+## 2.0 有什麼新的
+
+- 🆕 新增 `Antigravity` 第三 provider，自動拆成 `Gemini` 與 `Claude and GPT` 兩軌
+- 🔄 精簡面板改成圓環設計，主顯五小時額度，每週用量收進 hover
+- 🛡️ 單一實例保護，重複開啟或開機自啟都只會有一個視窗
+- 📦 改用 Tauri 2 重寫，提供免安裝版，體積更小、更省記憶體
+- 🚀 開機自啟會跟著目前執行的 `quotagem.exe` 路徑更新，搬動免安裝版後再開一次即可
+
 ## 畫面預覽
+
+> README 圖片需要重截時，請照 [README 截圖更新指南](./docs/screenshot-guide.md) 的檔名與畫面狀態替換。
 
 ### 精簡面板
 
@@ -43,6 +53,7 @@
 - 系統匣常駐，打開就看
 - `expanded` 與 `compact` 兩種面板
 - 同時查看 `Claude`、`Codex` 與 `Antigravity`
+- `Antigravity` 會分開顯示 `Gemini` 與 `Claude and GPT` 用量
 - 也可以自由選擇只顯示其中一兩個
 - 精簡面板直接顯示五小時額度，每週用量收在 hover 提示裡
 - 自訂警告與危險門檻
@@ -68,6 +79,10 @@ QuotaGem 想解決的是很簡單的一件事：
 前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的免安裝版（`QuotaGem_*_x64-portable.zip`）。解壓縮後執行 `quotagem.exe`，需要跟著 Windows 啟動時，再到設定面板開啟開機自啟。
 
 目前 Windows 發佈建議以免安裝版為主；安裝器會等程式碼簽章與 Microsoft Defender 誤判申訴穩定後再作為預設下載。開機自啟會指向目前執行的 `quotagem.exe` 路徑；如果你搬動 exe，從新位置執行一次即可更新 Windows 開機啟動項。
+
+## 目前狀態
+
+QuotaGem 2.0 的 Tauri 重寫已完成主要功能：三個 provider、展開與精簡面板、設定、告警、主題、語系、開機自啟、單一實例保護與免安裝版打包流程都已就緒。現階段建議優先發布 portable zip；MSI / NSIS 安裝器先保留為建置產物，等簽章與 Defender 誤判處理穩定後再升為預設下載。
 
 ## 開發者
 

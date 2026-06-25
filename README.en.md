@@ -13,7 +13,17 @@ With QuotaGem, you can quickly check:
 
 <img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
 
+## What's New in 2.0
+
+- 🆕 Added `Antigravity` as a third provider, auto-split into `Gemini` and `Claude and GPT` tracks
+- 🔄 Compact panel redesigned as rings, surfacing five-hour usage (weekly on hover)
+- 🛡️ Single-instance protection: reopening or autostart never spawns a second window
+- 📦 Rewritten on Tauri 2 with a portable build, smaller and lighter on memory
+- 🚀 Launch-at-login tracks the current `quotagem.exe` path, so moving the portable app only requires running it once from the new location
+
 ## Screenshots
+
+> When refreshing README images, follow the filename and capture-state checklist in [README screenshot guide](./docs/screenshot-guide.md).
 
 ### Compact panel
 
@@ -43,6 +53,7 @@ With QuotaGem, you can quickly check:
 - A calm tray-first experience
 - `expanded` and `compact` panels
 - Unified view for `Claude`, `Codex`, and `Antigravity`
+- `Antigravity` is split into `Gemini` and `Claude and GPT` usage groups
 - Show only the providers you care about
 - The compact panel surfaces your five-hour usage, with weekly on hover
 - Custom warning and danger thresholds
