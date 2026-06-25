@@ -1,7 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import type { ProviderVisibility, UsageDashboardState } from "../shared/dashboard";
+import type {
+  CodexDataSource,
+  ProviderVisibility,
+  UsageDashboardState,
+} from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
 import {
   getPanelScaleFromSliderIndex,
@@ -21,9 +25,19 @@ import "./styles.css";
 
 type SurfaceMode = "expanded" | "compact";
 type AppView = "dashboard" | "login";
+type SettingsTab = "general" | "codex" | "claude" | "antigravity";
+type GeneralSettingsTab = "behavior" | "alerts" | "time" | "appearance";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getPanelTransparencyFromOpacity(panelOpacity: number) {
+  return clamp(100 - panelOpacity, 0, 100);
+}
+
+function getPanelOpacityFromTransparency(panelTransparency: number) {
+  return clamp(100 - panelTransparency, 0, 100);
 }
 
 const DEFAULT_PROVIDERS: NormalizedProviderUsage[] = [
@@ -31,16 +45,72 @@ const DEFAULT_PROVIDERS: NormalizedProviderUsage[] = [
     provider: "claude",
     displayName: "Claude",
     health: "unavailable",
-    session: { label: "Session", percent: 0, resetLabel: "Unavailable", level: "normal" },
-    weekly: { label: "Weekly", percent: 0, resetLabel: "Unavailable", level: "normal" },
+    session: {
+      label: "Session",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    weekly: {
+      label: "Weekly",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
     lastUpdated: "",
   },
   {
     provider: "codex",
     displayName: "Codex",
     health: "unavailable",
-    session: { label: "Session", percent: 0, resetLabel: "Unavailable", level: "normal" },
-    weekly: { label: "Weekly", percent: 0, resetLabel: "Unavailable", level: "normal" },
+    session: {
+      label: "Session",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    weekly: {
+      label: "Weekly",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    lastUpdated: "",
+  },
+  {
+    provider: "agy",
+    displayName: "Agy",
+    health: "unavailable",
+    session: {
+      label: "Session",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
+    weekly: {
+      label: "Weekly",
+      percent: 0,
+      displayPercent: 0,
+      percentLabel: "0%",
+      barMode: "used",
+      resetLabel: "Unavailable",
+      level: "normal",
+    },
     lastUpdated: "",
   },
 ];
@@ -79,19 +149,71 @@ function UsageDashboardApp() {
       panelScale: 100,
       panelOpacity: 90,
       panelTone: "charcoal",
+      codexDataSource: "official",
+      codexProviderMultiplier: 1,
+      codexDailyLimitUsd: 10,
+      codexWeeklyLimitUsd: 50,
+      codexMonthlyLimitUsd: 200,
+      claudeShowRemainingUsage: false,
+      codexShowRemainingUsage: false,
+      antigravityShowRemainingUsage: false,
     },
   });
+  const [stateReady, setStateReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
+  const [generalSettingsTab, setGeneralSettingsTab] = useState<GeneralSettingsTab>("behavior");
   const [settingsNotice, setSettingsNotice] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
   const [connectingClaude, setConnectingClaude] = useState(false);
+  const [connectingAntigravity, setConnectingAntigravity] = useState(false);
   const [draftPreferences, setDraftPreferences] = useState(
     dashboardState.preferences,
   );
   const expandedPanelRef = useRef<HTMLElement | null>(null);
   const lastExpandedContentHeightRef = useRef(0);
+  const openSettingsSelectRef = useRef<HTMLSelectElement | null>(null);
 
   const surfaceMode = useMemo(() => getSurfaceMode(), []);
+
+  const closeSettingsSelect = useCallback(() => {
+    if (!openSettingsSelectRef.current) {
+      return;
+    }
+
+    openSettingsSelectRef.current.removeAttribute("data-open");
+    openSettingsSelectRef.current = null;
+  }, []);
+
+  const openSettingsSelect = useCallback((select: HTMLSelectElement) => {
+    if (openSettingsSelectRef.current === select) {
+      select.setAttribute("data-open", "true");
+      return;
+    }
+
+    closeSettingsSelect();
+    select.setAttribute("data-open", "true");
+    openSettingsSelectRef.current = select;
+  }, [closeSettingsSelect]);
+
+  const openSettingsSheet = useCallback(() => {
+    const expandedPanel = expandedPanelRef.current;
+    const measuredHeight = expandedPanel
+      ? Math.ceil(expandedPanel.getBoundingClientRect().height + 28)
+      : 0;
+
+    if (measuredHeight > 0) {
+      lastExpandedContentHeightRef.current = measuredHeight;
+    }
+
+    closeSettingsSelect();
+    setSettingsNotice("");
+    setDraftPreferences(dashboardState.preferences);
+    setSettingsTab("general");
+    setGeneralSettingsTab("behavior");
+    setSettingsOpen(true);
+  }, [closeSettingsSelect, dashboardState.preferences]);
 
   async function loadState() {
     setLoading(true);
@@ -100,6 +222,7 @@ function UsageDashboardApp() {
       setDashboardState(nextState);
       setDraftPreferences(nextState.preferences);
     } finally {
+      setStateReady(true);
       setLoading(false);
     }
   }
@@ -115,6 +238,12 @@ function UsageDashboardApp() {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      closeSettingsSelect();
+    }
+  }, [closeSettingsSelect, settingsOpen]);
 
   const visualPreferences = settingsOpen
     ? draftPreferences
@@ -157,6 +286,10 @@ function UsageDashboardApp() {
       return;
     }
 
+    if (!stateReady && !settingsOpen) {
+      return;
+    }
+
     const panel = expandedPanelRef.current;
     const measuredHeight = panel
       ? Math.ceil(panel.getBoundingClientRect().height + 28)
@@ -178,13 +311,14 @@ function UsageDashboardApp() {
     dashboardState.lastUpdatedLabel,
     loading,
     settingsOpen,
+    stateReady,
     surfaceMode,
     visibleProviders,
   ]);
 
   return (
     <div style={panelStyle}>
-      {!(surfaceMode === "expanded" && settingsOpen) ? (
+      {stateReady && !settingsOpen ? (
         <UsagePanel
           mode={surfaceMode}
           panelRef={surfaceMode === "expanded" ? expandedPanelRef : undefined}
@@ -194,8 +328,7 @@ function UsageDashboardApp() {
           lastUpdatedLabel={dashboardState.lastUpdatedLabel}
           onRefresh={() => void loadState()}
           onOpenSettings={() => {
-            setSettingsNotice("");
-            setSettingsOpen((current) => !current);
+            openSettingsSheet();
           }}
           onOpenExpanded={() => {
             void window.trayUsageWidget.openExpandedPanel();
@@ -208,8 +341,47 @@ function UsageDashboardApp() {
           }}
         />
       ) : null}
-      {surfaceMode === "expanded" && settingsOpen ? (
-        <aside className="settings-sheet">
+      {settingsOpen ? (
+        <aside
+          className="settings-sheet"
+          onBlurCapture={(event) => {
+            if (event.target instanceof HTMLSelectElement) {
+              closeSettingsSelect();
+            }
+          }}
+          onChangeCapture={(event) => {
+            if (event.target instanceof HTMLSelectElement) {
+              closeSettingsSelect();
+            }
+          }}
+          onKeyDownCapture={(event) => {
+            if (!(event.target instanceof HTMLSelectElement)) {
+              return;
+            }
+
+            if (event.key === "Escape" || event.key === "Tab") {
+              closeSettingsSelect();
+              return;
+            }
+
+            if (
+              event.key === "Enter" ||
+              event.key === " " ||
+              event.key === "ArrowDown" ||
+              event.key === "ArrowUp"
+            ) {
+              openSettingsSelect(event.target);
+            }
+          }}
+          onPointerDownCapture={(event) => {
+            if (event.target instanceof HTMLSelectElement) {
+              openSettingsSelect(event.target);
+              return;
+            }
+
+            closeSettingsSelect();
+          }}
+        >
           <div className="settings-sheet__content">
             <div className="settings-sheet__header">
               <h2>{t(language, "settings")}</h2>
@@ -218,274 +390,580 @@ function UsageDashboardApp() {
                 type="button"
                 aria-label={t(language, "closeSettings")}
                 onClick={() => {
+                  setDraftPreferences(dashboardState.preferences);
                   setSettingsOpen(false);
                 }}
               >
                 <SettingsCloseIcon />
               </button>
             </div>
-            <p className="settings-sheet__copy">
-              {t(language, "codexAutoDetected")}
-            </p>
-            <p className="settings-sheet__hint">
-              {t(language, "recommendedConnectClaude")}
-            </p>
-            <div className="settings-actions settings-actions--top">
+            <div className="settings-tabs" role="tablist" aria-label={t(language, "settings")}>
               <button
-                className="icon-button"
+                className={`settings-tab${settingsTab === "general" ? " settings-tab--active" : ""}`}
                 type="button"
-                disabled={connectingClaude}
+                role="tab"
+                aria-selected={settingsTab === "general"}
+                aria-controls="settings-tabpanel-general"
                 onClick={() => {
-                  setSettingsNotice("");
-                  setConnectingClaude(true);
-                  void window.trayUsageWidget
-                      .connectClaude()
-                      .then((nextState) => {
-                      setSettingsNotice(t(language, "claudeConnectedSuccessfully"));
-                      setDashboardState(nextState);
-                      setDraftPreferences(nextState.preferences);
-                    })
-                    .catch((error: unknown) => {
-                      const message =
-                        error instanceof Error
-                          ? error.message
-                          : t(language, "couldNotConnectClaude");
-                      setSettingsNotice(message);
-                    })
-                    .finally(() => {
-                      setConnectingClaude(false);
-                    });
+                  setSettingsTab("general");
                 }}
               >
-                {connectingClaude
-                  ? t(language, "waitingForClaudeLogin")
-                  : t(language, "connectClaude")}
+                {t(language, "settingsGeneralTab")}
+              </button>
+              <button
+                className={`settings-tab${settingsTab === "codex" ? " settings-tab--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={settingsTab === "codex"}
+                aria-controls="settings-tabpanel-codex"
+                onClick={() => {
+                  setSettingsTab("codex");
+                }}
+              >
+                {t(language, "settingsCodexTab")}
+              </button>
+              <button
+                className={`settings-tab${settingsTab === "claude" ? " settings-tab--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={settingsTab === "claude"}
+                aria-controls="settings-tabpanel-claude"
+                onClick={() => {
+                  setSettingsTab("claude");
+                }}
+              >
+                {t(language, "settingsClaudeTab")}
+              </button>
+              <button
+                className={`settings-tab${settingsTab === "antigravity" ? " settings-tab--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={settingsTab === "antigravity"}
+                aria-controls="settings-tabpanel-antigravity"
+                onClick={() => {
+                  setSettingsTab("antigravity");
+                }}
+              >
+                {t(language, "settingsAntigravityTab")}
               </button>
             </div>
-            <label className="settings-field">
-              <span>{t(language, "language")}</span>
-              <select
-                value={draftPreferences.language}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    language: event.target.value as WidgetLanguage,
-                  }));
-                }}
+            {settingsTab === "general" ? (
+              <section
+                className="settings-tabpanel"
+                id="settings-tabpanel-general"
+                role="tabpanel"
               >
-                <option value="en">{t(language, "english")}</option>
-                <option value="zh-TW">{t(language, "traditionalChinese")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "preferredDisplayMode")}</span>
-              <select
-                value={draftPreferences.preferredDisplayMode}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    preferredDisplayMode: event.target.value as "expanded" | "compact",
-                  }));
-                }}
+                <p className="settings-sheet__hint">{t(language, "generalSettingsHint")}</p>
+                <div className="settings-subtabs" role="tablist" aria-label={t(language, "settingsGeneralTab")}>
+                  <button
+                    className={`settings-subtab${generalSettingsTab === "behavior" ? " settings-subtab--active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={generalSettingsTab === "behavior"}
+                    aria-controls="settings-subpanel-behavior"
+                    onClick={() => {
+                      setGeneralSettingsTab("behavior");
+                    }}
+                  >
+                    {t(language, "generalBehaviorTab")}
+                  </button>
+                  <button
+                    className={`settings-subtab${generalSettingsTab === "alerts" ? " settings-subtab--active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={generalSettingsTab === "alerts"}
+                    aria-controls="settings-subpanel-alerts"
+                    onClick={() => {
+                      setGeneralSettingsTab("alerts");
+                    }}
+                  >
+                    {t(language, "generalAlertsTab")}
+                  </button>
+                  <button
+                    className={`settings-subtab${generalSettingsTab === "time" ? " settings-subtab--active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={generalSettingsTab === "time"}
+                    aria-controls="settings-subpanel-time"
+                    onClick={() => {
+                      setGeneralSettingsTab("time");
+                    }}
+                  >
+                    {t(language, "generalTimeTab")}
+                  </button>
+                  <button
+                    className={`settings-subtab${generalSettingsTab === "appearance" ? " settings-subtab--active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={generalSettingsTab === "appearance"}
+                    aria-controls="settings-subpanel-appearance"
+                    onClick={() => {
+                      setGeneralSettingsTab("appearance");
+                    }}
+                  >
+                    {t(language, "generalAppearanceTab")}
+                  </button>
+                </div>
+                {generalSettingsTab === "behavior" ? (
+                  <section className="settings-subpanel" id="settings-subpanel-behavior" role="tabpanel">
+                    <label className="settings-field">
+                      <span>{t(language, "language")}</span>
+                      <select
+                        value={draftPreferences.language}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            language: event.target.value as WidgetLanguage,
+                          }));
+                        }}
+                      >
+                        <option value="en">{t(language, "english")}</option>
+                        <option value="zh-TW">{t(language, "traditionalChinese")}</option>
+                        <option value="zh-CN">{t(language, "simplifiedChinese")}</option>
+                      </select>
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "preferredDisplayMode")}</span>
+                      <select
+                        value={draftPreferences.preferredDisplayMode}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            preferredDisplayMode: event.target.value as "expanded" | "compact",
+                          }));
+                        }}
+                      >
+                        <option value="expanded">{t(language, "expandedPanel")}</option>
+                        <option value="compact">{t(language, "compactPanel")}</option>
+                      </select>
+                    </label>
+                    <label className="settings-field settings-field--checkbox">
+                      <span>{t(language, "launchAtLogin")}</span>
+                      <input
+                        className="settings-checkbox"
+                        type="checkbox"
+                        checked={draftPreferences.launchAtLogin}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            launchAtLogin: event.target.checked,
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "providerVisibility")}</span>
+                      <select
+                        value={draftPreferences.providerVisibility}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            providerVisibility: event.target.value as ProviderVisibility,
+                          }));
+                        }}
+                      >
+                        <option value="both">{t(language, "bothProviders")}</option>
+                        <option value="claude">{t(language, "claudeOnly")}</option>
+                        <option value="codex">{t(language, "codexOnly")}</option>
+                        <option value="agy">{t(language, "agyOnly")}</option>
+                      </select>
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "refreshInterval")}</span>
+                      <select
+                        value={String(draftPreferences.refreshIntervalMinutes)}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            refreshIntervalMinutes: Number(event.target.value),
+                          }));
+                        }}
+                      >
+                        <option value="1">{t(language, "oneMinute")}</option>
+                        <option value="5">{t(language, "fiveMinutes")}</option>
+                        <option value="15">{t(language, "fifteenMinutes")}</option>
+                      </select>
+                    </label>
+                  </section>
+                ) : null}
+                {generalSettingsTab === "alerts" ? (
+                  <section className="settings-subpanel" id="settings-subpanel-alerts" role="tabpanel">
+                    <label className="settings-field settings-field--checkbox">
+                      <span>{t(language, "enableNotifications")}</span>
+                      <input
+                        className="settings-checkbox"
+                        type="checkbox"
+                        checked={draftPreferences.notificationsEnabled}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            notificationsEnabled: event.target.checked,
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "notificationMode")}</span>
+                      <select
+                        value={draftPreferences.notificationLevel}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            notificationLevel: event.target.value as "all" | "danger",
+                          }));
+                        }}
+                      >
+                        <option value="all">{t(language, "notificationAllLevels")}</option>
+                        <option value="danger">{t(language, "notificationDangerOnly")}</option>
+                      </select>
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "warningThreshold")}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={draftPreferences.warningThreshold}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          if (!Number.isFinite(nextValue)) {
+                            return;
+                          }
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            warningThreshold: nextValue,
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "dangerThreshold")}</span>
+                      <input
+                        type="number"
+                        min="2"
+                        max="100"
+                        value={draftPreferences.dangerThreshold}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          if (!Number.isFinite(nextValue)) {
+                            return;
+                          }
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            dangerThreshold: nextValue,
+                          }));
+                        }}
+                      />
+                    </label>
+                  </section>
+                ) : null}
+                {generalSettingsTab === "time" ? (
+                  <section className="settings-subpanel" id="settings-subpanel-time" role="tabpanel">
+                    <label className="settings-field">
+                      <span>{t(language, "timeDisplayFormat")}</span>
+                      <select
+                        value={draftPreferences.timeFormat}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            timeFormat: event.target.value as "24h" | "12h",
+                          }));
+                        }}
+                      >
+                        <option value="24h">{t(language, "twentyFourHour")}</option>
+                        <option value="12h">{t(language, "twelveHour")}</option>
+                      </select>
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "dateFormat")}</span>
+                      <select
+                        value={draftPreferences.dateFormat}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            dateFormat: event.target.value as typeof current.dateFormat,
+                          }));
+                        }}
+                      >
+                        <option value="iso">{t(language, "dateFormatIso")}</option>
+                        <option value="mdy">{t(language, "dateFormatMdy")}</option>
+                        <option value="dmy">{t(language, "dateFormatDmy")}</option>
+                      </select>
+                    </label>
+                  </section>
+                ) : null}
+                {generalSettingsTab === "appearance" ? (
+                  <section className="settings-subpanel" id="settings-subpanel-appearance" role="tabpanel">
+                    <label className="settings-field">
+                      <span>{t(language, "panelScale")}: {draftPreferences.panelScale}%</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max={String(PANEL_SCALE_OPTIONS.length - 1)}
+                        step="1"
+                        value={String(getPanelScaleSliderIndex(draftPreferences.panelScale))}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            panelScale: getPanelScaleFromSliderIndex(Number(event.target.value)),
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label className="settings-field">
+                      <span>
+                        {t(language, "panelTransparency")}:{" "}
+                        {getPanelTransparencyFromOpacity(draftPreferences.panelOpacity)}%
+                      </span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        step="2"
+                        value={getPanelTransparencyFromOpacity(draftPreferences.panelOpacity)}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            panelOpacity: getPanelOpacityFromTransparency(
+                              Number(event.target.value),
+                            ),
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label className="settings-field">
+                      <span>{t(language, "panelBackgroundColor")}</span>
+                      <select
+                        value={draftPreferences.panelTone}
+                        onChange={(event) => {
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            panelTone: event.target.value as PanelTone,
+                          }));
+                        }}
+                      >
+                        {PANEL_THEME_OPTIONS.map((theme) => (
+                          <option key={theme} value={theme}>
+                            {t(language, theme)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </section>
+                ) : null}
+              </section>
+            ) : null}
+            {settingsTab === "codex" ? (
+              <section
+                className="settings-tabpanel"
+                id="settings-tabpanel-codex"
+                role="tabpanel"
               >
-                <option value="expanded">{t(language, "expandedPanel")}</option>
-                <option value="compact">{t(language, "compactPanel")}</option>
-              </select>
-            </label>
-            <label className="settings-field settings-field--checkbox">
-              <span>{t(language, "launchAtLogin")}</span>
-              <input
-                className="settings-checkbox"
-                type="checkbox"
-                checked={draftPreferences.launchAtLogin}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    launchAtLogin: event.target.checked,
-                  }));
-                }}
-              />
-            </label>
-            <label className="settings-field settings-field--checkbox">
-              <span>{t(language, "enableNotifications")}</span>
-              <input
-                className="settings-checkbox"
-                type="checkbox"
-                checked={draftPreferences.notificationsEnabled}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    notificationsEnabled: event.target.checked,
-                  }));
-                }}
-              />
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "notificationMode")}</span>
-              <select
-                value={draftPreferences.notificationLevel}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    notificationLevel: event.target.value as "all" | "danger",
-                  }));
-                }}
+                <p className="settings-sheet__hint">{t(language, "codexSettingsHint")}</p>
+                <label className="settings-field">
+                  <span>{t(language, "codexDataSource")}</span>
+                  <select
+                    value={draftPreferences.codexDataSource}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        codexDataSource: event.target.value as CodexDataSource,
+                      }));
+                    }}
+                  >
+                    <option value="official">{t(language, "codexDataSourceOfficial")}</option>
+                    <option value="local">{t(language, "codexDataSourceLocal")}</option>
+                  </select>
+                </label>
+                <label className="settings-field settings-field--checkbox">
+                  <span>{t(language, "codexShowRemainingUsage")}</span>
+                  <input
+                    className="settings-checkbox"
+                    type="checkbox"
+                    checked={draftPreferences.codexShowRemainingUsage}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        codexShowRemainingUsage: event.target.checked,
+                      }));
+                    }}
+                  />
+                </label>
+                {draftPreferences.codexDataSource === "local" ? (
+                  <>
+                    <label className="settings-field">
+                      <span>
+                        {t(language, "codexProviderMultiplier")}: x
+                        {draftPreferences.codexProviderMultiplier.toFixed(1)}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={draftPreferences.codexProviderMultiplier}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          if (!Number.isFinite(nextValue)) {
+                            return;
+                          }
+                          setDraftPreferences((current) => ({
+                            ...current,
+                            codexProviderMultiplier: Math.min(
+                              10,
+                              Math.max(0, Math.round(nextValue * 10) / 10),
+                            ),
+                          }));
+                        }}
+                      />
+                    </label>
+                    <CodexUsdLimitField
+                      label={t(language, "codexDailyLimit")}
+                      value={draftPreferences.codexDailyLimitUsd}
+                      onChange={(codexDailyLimitUsd) => {
+                        setDraftPreferences((current) => ({
+                          ...current,
+                          codexDailyLimitUsd,
+                        }));
+                      }}
+                    />
+                    <CodexUsdLimitField
+                      label={t(language, "codexWeeklyLimit")}
+                      value={draftPreferences.codexWeeklyLimitUsd}
+                      onChange={(codexWeeklyLimitUsd) => {
+                        setDraftPreferences((current) => ({
+                          ...current,
+                          codexWeeklyLimitUsd,
+                        }));
+                      }}
+                    />
+                    <CodexUsdLimitField
+                      label={t(language, "codexMonthlyLimit")}
+                      value={draftPreferences.codexMonthlyLimitUsd}
+                      onChange={(codexMonthlyLimitUsd) => {
+                        setDraftPreferences((current) => ({
+                          ...current,
+                          codexMonthlyLimitUsd,
+                        }));
+                      }}
+                    />
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+            {settingsTab === "claude" ? (
+              <section
+                className="settings-tabpanel"
+                id="settings-tabpanel-claude"
+                role="tabpanel"
               >
-                <option value="all">{t(language, "notificationAllLevels")}</option>
-                <option value="danger">{t(language, "notificationDangerOnly")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "providerVisibility")}</span>
-              <select
-                value={draftPreferences.providerVisibility}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    providerVisibility: event.target.value as ProviderVisibility,
-                  }));
-                }}
+                <p className="settings-sheet__hint">{t(language, "claudeSettingsHint")}</p>
+                <p className="settings-sheet__hint">
+                  {t(language, "recommendedConnectClaude")}
+                </p>
+                <div className="settings-actions settings-actions--top">
+                  <button
+                    className="icon-button"
+                    type="button"
+                    disabled={connectingClaude}
+                    onClick={() => {
+                      setSettingsNotice("");
+                      setConnectingClaude(true);
+                      void window.trayUsageWidget
+                        .connectClaude()
+                        .then((nextState) => {
+                          setSettingsNotice(t(language, "claudeConnectedSuccessfully"));
+                          setDashboardState(nextState);
+                          setDraftPreferences(nextState.preferences);
+                        })
+                        .catch((error: unknown) => {
+                          const message =
+                            error instanceof Error
+                              ? error.message
+                              : t(language, "couldNotConnectClaude");
+                          setSettingsNotice(message);
+                        })
+                        .finally(() => {
+                          setConnectingClaude(false);
+                        });
+                    }}
+                  >
+                    {connectingClaude
+                      ? t(language, "waitingForClaudeLogin")
+                      : t(language, "connectClaude")}
+                  </button>
+                </div>
+                <label className="settings-field settings-field--checkbox">
+                  <span>{t(language, "codexShowRemainingUsage")}</span>
+                  <input
+                    className="settings-checkbox"
+                    type="checkbox"
+                    checked={draftPreferences.claudeShowRemainingUsage}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        claudeShowRemainingUsage: event.target.checked,
+                      }));
+                    }}
+                  />
+                </label>
+              </section>
+            ) : null}
+            {settingsTab === "antigravity" ? (
+              <section
+                className="settings-tabpanel"
+                id="settings-tabpanel-antigravity"
+                role="tabpanel"
               >
-                <option value="both">{t(language, "bothProviders")}</option>
-                <option value="claude">{t(language, "claudeOnly")}</option>
-                <option value="codex">{t(language, "codexOnly")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "refreshInterval")}</span>
-              <select
-                value={String(draftPreferences.refreshIntervalMinutes)}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    refreshIntervalMinutes: Number(event.target.value),
-                  }));
-                }}
-              >
-                <option value="1">{t(language, "oneMinute")}</option>
-                <option value="5">{t(language, "fiveMinutes")}</option>
-                <option value="15">{t(language, "fifteenMinutes")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "warningThreshold")}</span>
-              <input
-                type="number"
-                min="1"
-                max="99"
-                value={draftPreferences.warningThreshold}
-                onChange={(event) => {
-                  const nextValue = Number(event.target.value);
-                  if (!Number.isFinite(nextValue)) {
-                    return;
-                  }
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    warningThreshold: nextValue,
-                  }));
-                }}
-              />
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "dangerThreshold")}</span>
-              <input
-                type="number"
-                min="2"
-                max="100"
-                value={draftPreferences.dangerThreshold}
-                onChange={(event) => {
-                  const nextValue = Number(event.target.value);
-                  if (!Number.isFinite(nextValue)) {
-                    return;
-                  }
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    dangerThreshold: nextValue,
-                  }));
-                }}
-              />
-            </label>
-<label className="settings-field">
-              <span>{t(language, "timeDisplayFormat")}</span>
-              <select
-                value={draftPreferences.timeFormat}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    timeFormat: event.target.value as "24h" | "12h",
-                  }));
-                }}
-              >
-                <option value="24h">{t(language, "twentyFourHour")}</option>
-                <option value="12h">{t(language, "twelveHour")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "dateFormat")}</span>
-              <select
-                value={draftPreferences.dateFormat}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    dateFormat: event.target.value as typeof current.dateFormat,
-                  }));
-                }}
-              >
-                <option value="iso">{t(language, "dateFormatIso")}</option>
-                <option value="mdy">{t(language, "dateFormatMdy")}</option>
-                <option value="dmy">{t(language, "dateFormatDmy")}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "panelScale")}: {draftPreferences.panelScale}%</span>
-              <input
-                type="range"
-                min="0"
-                max={String(PANEL_SCALE_OPTIONS.length - 1)}
-                step="1"
-                value={String(getPanelScaleSliderIndex(draftPreferences.panelScale))}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    panelScale: getPanelScaleFromSliderIndex(Number(event.target.value)),
-                  }));
-                }}
-              />
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "panelTransparency")}: {draftPreferences.panelOpacity}%</span>
-              <input
-                type="range"
-                min="70"
-                max="96"
-                step="2"
-                value={draftPreferences.panelOpacity}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    panelOpacity: Number(event.target.value),
-                  }));
-                }}
-              />
-            </label>
-            <label className="settings-field">
-              <span>{t(language, "panelBackgroundColor")}</span>
-              <select
-                value={draftPreferences.panelTone}
-                onChange={(event) => {
-                  setDraftPreferences((current) => ({
-                    ...current,
-                    panelTone: event.target.value as PanelTone,
-                  }));
-                }}
-              >
-                {PANEL_THEME_OPTIONS.map((theme) => (
-                  <option key={theme} value={theme}>
-                    {t(language, theme)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <p className="settings-sheet__hint">{t(language, "antigravitySettingsHint")}</p>
+                <div className="settings-actions settings-actions--top">
+                  <button
+                    className="icon-button"
+                    type="button"
+                    disabled={connectingAntigravity}
+                    onClick={() => {
+                      setSettingsNotice("");
+                      setConnectingAntigravity(true);
+                      void window.trayUsageWidget
+                        .connectAntigravity()
+                        .then((nextState) => {
+                          setSettingsNotice(t(language, "antigravityConnectStarted"));
+                          setDashboardState(nextState);
+                          setDraftPreferences(nextState.preferences);
+                        })
+                        .catch((error: unknown) => {
+                          const message =
+                            error instanceof Error
+                              ? error.message
+                              : t(language, "couldNotConnectAntigravity");
+                          setSettingsNotice(message);
+                        })
+                        .finally(() => {
+                          setConnectingAntigravity(false);
+                        });
+                    }}
+                  >
+                    {connectingAntigravity
+                      ? t(language, "openingAntigravity")
+                      : t(language, "connectAntigravity")}
+                  </button>
+                </div>
+                <label className="settings-field settings-field--checkbox">
+                  <span>{t(language, "codexShowRemainingUsage")}</span>
+                  <input
+                    className="settings-checkbox"
+                    type="checkbox"
+                    checked={draftPreferences.antigravityShowRemainingUsage}
+                    onChange={(event) => {
+                      setDraftPreferences((current) => ({
+                        ...current,
+                        antigravityShowRemainingUsage: event.target.checked,
+                      }));
+                    }}
+                  />
+                </label>
+              </section>
+            ) : null}
             {settingsNotice ? (
               <p className="settings-sheet__notice">{settingsNotice}</p>
             ) : null}
@@ -494,11 +972,14 @@ function UsageDashboardApp() {
             <button
               className="icon-button"
               type="button"
+              disabled={savingSettings}
+              aria-busy={savingSettings}
               onClick={() => {
+                setSavingSettings(true);
+                setSettingsNotice("");
                 void window.trayUsageWidget
                   .saveSettings(draftPreferences)
                   .then((nextState) => {
-                    setSettingsNotice(t(draftPreferences.language, "savedClaudeAccepted"));
                     setDashboardState(nextState);
                     setDraftPreferences(nextState.preferences);
                     setSettingsOpen(false);
@@ -509,10 +990,15 @@ function UsageDashboardApp() {
                         ? error.message
                         : t(language, "couldNotSaveClaudeSettings");
                     setSettingsNotice(message);
+                  })
+                  .finally(() => {
+                    setSavingSettings(false);
                   });
               }}
             >
-              {t(language, "savePreferences")}
+              {savingSettings
+                ? t(language, "savingPreferences")
+                : t(language, "savePreferences")}
             </button>
           </div>
         </aside>
@@ -522,6 +1008,35 @@ function UsageDashboardApp() {
 }
 
 export default App;
+
+function CodexUsdLimitField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="settings-field">
+      <span>{label}</span>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={value}
+        onChange={(event) => {
+          const nextValue = Number(event.target.value);
+          if (!Number.isFinite(nextValue)) {
+            return;
+          }
+          onChange(Math.max(0, Math.round(nextValue * 100) / 100));
+        }}
+      />
+    </label>
+  );
+}
 
 function SettingsCloseIcon() {
   return (

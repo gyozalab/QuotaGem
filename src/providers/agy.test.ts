@@ -10,7 +10,7 @@ describe("extractLatestAgyUsage", () => {
     const result = extractLatestAgyUsage(jsonl);
     expect(result).toEqual({
       provider: "agy",
-      displayName: "agy",
+      displayName: "Agy",
       sessionPercent: 32.3,
       sessionResetAt: "2026-06-19T12:28:55Z",
       weeklyPercent: 15.2,
@@ -32,7 +32,7 @@ describe("extractLatestAgyUsage", () => {
     const result = extractLatestAgyUsage(jsonl);
     expect(result).toEqual({
       provider: "agy",
-      displayName: "agy",
+      displayName: "Agy",
       sessionPercent: 28.4,
       sessionResetAt: "2026-06-19T12:28:55Z",
       weeklyPercent: 14.6,
@@ -54,7 +54,7 @@ describe("extractLatestAgyUsage", () => {
     const result = extractLatestAgyUsage(jsonl);
     expect(result).toEqual({
       provider: "agy",
-      displayName: "agy",
+      displayName: "Agy",
       sessionPercent: 21.2,
       sessionResetAt: "2026-06-19T12:28:55Z",
       weeklyPercent: 0,
@@ -76,7 +76,7 @@ describe("extractLatestAgyUsage", () => {
     const result = extractLatestAgyUsage(jsonl);
     expect(result).toEqual({
       provider: "agy",
-      displayName: "agy",
+      displayName: "Agy",
       sessionPercent: 10,
       sessionResetAt: null,
       weeklyPercent: 0,

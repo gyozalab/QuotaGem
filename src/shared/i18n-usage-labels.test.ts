@@ -7,4 +7,9 @@ describe("i18n usage labels", () => {
     expect(t("zh-TW", "session")).toBe("每五小時");
     expect(t("zh-TW", "weekly")).toBe("每週");
   });
+
+  it("uses Simplified Chinese usage period labels", () => {
+    expect(t("zh-CN", "session")).toBe("每五小时");
+    expect(t("zh-CN", "weekly")).toBe("每周");
+  });
 });

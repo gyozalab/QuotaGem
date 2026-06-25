@@ -75,7 +75,7 @@ export function extractLatestAgyUsage(jsonl: string): ProviderUsageSnapshot | nu
 
   return {
     provider: "agy",
-    displayName: "agy",
+    displayName: "Agy",
     sessionPercent,
     sessionResetAt,
     weeklyPercent,

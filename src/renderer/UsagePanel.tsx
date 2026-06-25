@@ -1,7 +1,27 @@
-import type { Ref } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  LinearScale,
+  Tooltip,
+  type ChartConfiguration,
+} from "chart.js";
 
 import { t, type WidgetLanguage } from "../shared/i18n";
-import type { NormalizedProviderUsage } from "../shared/usage";
+import type { NormalizedProviderUsage, ProviderId } from "../shared/usage";
+
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
+
+const WEATHER_COST_STOPS = [
+  { costUsd: 0, rgb: [96, 190, 255] },
+  { costUsd: 20, rgb: [139, 211, 255] },
+  { costUsd: 35, rgb: [255, 224, 118] },
+  { costUsd: 50, rgb: [255, 184, 60] },
+  { costUsd: 80, rgb: [255, 128, 79] },
+  { costUsd: 120, rgb: [229, 69, 86] },
+] as const;
 
 export interface UsagePanelProps {
   mode: "expanded" | "compact";
@@ -30,6 +50,38 @@ export function UsagePanel({
   onOpenCompact,
   onClose,
 }: UsagePanelProps) {
+  const [selectedHistoryProviderId, setSelectedHistoryProviderId] =
+    useState<ProviderId>("codex");
+  const historyProviders = useMemo(
+    () =>
+      providers.filter((provider) =>
+        ["claude", "codex", "agy"].includes(provider.provider),
+      ),
+    [providers],
+  );
+  const hasHistoryUsageProvider = historyProviders.some(
+    (provider) => provider.localUsage,
+  );
+
+  useEffect(() => {
+    if (historyProviders.length === 0) {
+      return;
+    }
+
+    if (
+      historyProviders.some(
+        (provider) => provider.provider === selectedHistoryProviderId,
+      )
+    ) {
+      return;
+    }
+
+    setSelectedHistoryProviderId(
+      historyProviders.find((provider) => provider.localUsage)?.provider ??
+        historyProviders[0].provider,
+    );
+  }, [historyProviders, selectedHistoryProviderId]);
+
   if (mode === "compact") {
     const colClass =
       providers.length >= 3
@@ -44,7 +96,6 @@ export function UsagePanel({
           <div className="compact-widget__toolbar drag-region">
             <div className="compact-widget__identity">
               <span className="compact-widget__brand">
-                <UsageMark className="compact-widget__mark" />
                 <span>QuotaGem</span>
               </span>
               <span className="compact-widget__meta" aria-live="polite">
@@ -64,6 +115,28 @@ export function UsagePanel({
                 <SwitchExpandedIcon />
               </button>
               <button
+                className="icon-button icon-button--icon no-drag"
+                type="button"
+                aria-label={t(language, "refreshUsage")}
+                onClick={() => {
+                  onRefresh?.();
+                }}
+                title={t(language, "refreshUsage")}
+              >
+                <RefreshIcon />
+              </button>
+              <button
+                className="icon-button icon-button--icon no-drag"
+                type="button"
+                aria-label={t(language, "openSettings")}
+                onClick={() => {
+                  onOpenSettings?.();
+                }}
+                title={t(language, "openSettings")}
+              >
+                <SettingsIcon />
+              </button>
+              <button
                 className="icon-button icon-button--icon icon-button--close no-drag"
                 type="button"
                 aria-label={t(language, "hidePanel")}
@@ -76,6 +149,14 @@ export function UsagePanel({
               </button>
             </div>
           </div>
+          {hasHistoryUsageProvider ? (
+            <UsageHistoryChart
+              language={language}
+              providers={historyProviders}
+              selectedProviderId={selectedHistoryProviderId}
+              onSelectedProviderChange={setSelectedHistoryProviderId}
+            />
+          ) : null}
           <div className="compact-widget__content no-drag">
             <div className={`compact-widget__columns${colClass}`}>
               {providers.map((provider) => (
@@ -98,19 +179,39 @@ export function UsagePanel({
                     language={language}
                     label={provider.session.label}
                     percent={provider.session.percent}
+                    displayPercent={provider.session.displayPercent}
+                    percentLabel={provider.session.percentLabel}
+                    barMode={provider.session.barMode}
                     resetLabel={provider.session.resetLabel}
                   />
                   <CompactMetric
                     language={language}
                     label={provider.weekly.label}
                     percent={provider.weekly.percent}
+                    displayPercent={provider.weekly.displayPercent}
+                    percentLabel={provider.weekly.percentLabel}
+                    barMode={provider.weekly.barMode}
                     resetLabel={provider.weekly.resetLabel}
                   />
+                  {provider.monthly && (
+                    <CompactMetric
+                      language={language}
+                      label={provider.monthly.label}
+                      percent={provider.monthly.percent}
+                      displayPercent={provider.monthly.displayPercent}
+                      percentLabel={provider.monthly.percentLabel}
+                      barMode={provider.monthly.barMode}
+                      resetLabel={provider.monthly.resetLabel}
+                    />
+                  )}
                   {provider.thirdPartySession && (
                     <CompactMetric
                       language={language}
                       label={provider.thirdPartySession.label}
                       percent={provider.thirdPartySession.percent}
+                      displayPercent={provider.thirdPartySession.displayPercent}
+                      percentLabel={provider.thirdPartySession.percentLabel}
+                      barMode={provider.thirdPartySession.barMode}
                       resetLabel={provider.thirdPartySession.resetLabel}
                     />
                   )}
@@ -119,6 +220,9 @@ export function UsagePanel({
                       language={language}
                       label={provider.thirdPartyWeekly.label}
                       percent={provider.thirdPartyWeekly.percent}
+                      displayPercent={provider.thirdPartyWeekly.displayPercent}
+                      percentLabel={provider.thirdPartyWeekly.percentLabel}
+                      barMode={provider.thirdPartyWeekly.barMode}
                       resetLabel={provider.thirdPartyWeekly.resetLabel}
                     />
                   )}
@@ -219,6 +323,9 @@ export function UsagePanel({
                 language={language}
                 label={provider.session.label}
                 percent={provider.session.percent}
+                displayPercent={provider.session.displayPercent}
+                percentLabel={provider.session.percentLabel}
+                barMode={provider.session.barMode}
                 resetLabel={provider.session.resetLabel}
                 level={provider.session.level}
               />
@@ -226,14 +333,32 @@ export function UsagePanel({
                 language={language}
                 label={provider.weekly.label}
                 percent={provider.weekly.percent}
+                displayPercent={provider.weekly.displayPercent}
+                percentLabel={provider.weekly.percentLabel}
+                barMode={provider.weekly.barMode}
                 resetLabel={provider.weekly.resetLabel}
                 level={provider.weekly.level}
               />
+              {provider.monthly && (
+                <ProviderMetric
+                  language={language}
+                  label={provider.monthly.label}
+                  percent={provider.monthly.percent}
+                  displayPercent={provider.monthly.displayPercent}
+                  percentLabel={provider.monthly.percentLabel}
+                  barMode={provider.monthly.barMode}
+                  resetLabel={provider.monthly.resetLabel}
+                  level={provider.monthly.level}
+                />
+              )}
               {provider.thirdPartySession && (
                 <ProviderMetric
                   language={language}
                   label={provider.thirdPartySession.label}
                   percent={provider.thirdPartySession.percent}
+                  displayPercent={provider.thirdPartySession.displayPercent}
+                  percentLabel={provider.thirdPartySession.percentLabel}
+                  barMode={provider.thirdPartySession.barMode}
                   resetLabel={provider.thirdPartySession.resetLabel}
                   level={provider.thirdPartySession.level}
                 />
@@ -243,6 +368,9 @@ export function UsagePanel({
                   language={language}
                   label={provider.thirdPartyWeekly.label}
                   percent={provider.thirdPartyWeekly.percent}
+                  displayPercent={provider.thirdPartyWeekly.displayPercent}
+                  percentLabel={provider.thirdPartyWeekly.percentLabel}
+                  barMode={provider.thirdPartyWeekly.barMode}
                   resetLabel={provider.thirdPartyWeekly.resetLabel}
                   level={provider.thirdPartyWeekly.level}
                 />
@@ -255,16 +383,320 @@ export function UsagePanel({
   );
 }
 
+function UsageHistoryChart({
+  language,
+  providers,
+  selectedProviderId,
+  onSelectedProviderChange,
+}: {
+  language: WidgetLanguage;
+  providers: NormalizedProviderUsage[];
+  selectedProviderId: ProviderId;
+  onSelectedProviderChange: (provider: ProviderId) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const selectedProvider =
+    providers.find((provider) => provider.provider === selectedProviderId) ??
+    providers.find((provider) => provider.localUsage) ??
+    providers[0];
+  const localUsage = selectedProvider?.localUsage;
+  const chartDays = useMemo(
+    () => localUsage?.recentDailyUsage ?? [],
+    [localUsage?.recentDailyUsage],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || chartDays.length === 0) {
+      return;
+    }
+
+    let context: CanvasRenderingContext2D | null = null;
+
+    try {
+      context = canvas.getContext("2d");
+    } catch {
+      return;
+    }
+
+    if (!context) {
+      return;
+    }
+
+    const canvasStyles = getComputedStyle(canvas);
+    const panelTextRgb =
+      canvasStyles.getPropertyValue("--panel-text-rgb").trim() || "245, 247, 251";
+    const panelMutedRgb =
+      canvasStyles.getPropertyValue("--panel-muted-rgb").trim() || panelTextRgb;
+    const panelCardRgb =
+      canvasStyles.getPropertyValue("--panel-card-rgb").trim() || "10, 14, 22";
+    const panelBorderRgb =
+      canvasStyles.getPropertyValue("--panel-border-rgb").trim() || panelMutedRgb;
+
+    const config: ChartConfiguration<"bar", number[], string> = {
+      type: "bar",
+      data: {
+        labels: chartDays.map((day) => day.dateLabel),
+        datasets: [
+          {
+            data: chartDays.map((day) => day.costUsd),
+            backgroundColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 0.9),
+            ),
+            borderColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 1),
+            ),
+            borderWidth: 1,
+            borderRadius: 6,
+            borderSkipped: false,
+            hoverBackgroundColor: chartDays.map((day) =>
+              getWeatherUsageColor(day.costUsd, 0.98),
+            ),
+            maxBarThickness: 22,
+          },
+        ],
+      },
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        responsive: true,
+        layout: {
+          padding: {
+            top: 4,
+            right: 8,
+            bottom: 0,
+            left: 8,
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: `rgba(${panelCardRgb}, 0.96)`,
+            bodyColor: `rgba(${panelTextRgb}, 0.92)`,
+            borderColor: `rgba(${panelBorderRgb}, 0.24)`,
+            borderWidth: 1,
+            displayColors: false,
+            padding: 10,
+            titleColor: `rgba(${panelTextRgb}, 0.98)`,
+            callbacks: {
+              label(context) {
+                const day = chartDays[context.dataIndex];
+
+                return day ? `Tokens: ${day.tokensLabel}` : "";
+              },
+              afterLabel(context) {
+                const day = chartDays[context.dataIndex];
+
+                return day ? `Cost: ${day.costLabel}` : "";
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            border: {
+              display: false,
+            },
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: `rgba(${panelMutedRgb}, 0.82)`,
+              font: {
+                size: 11,
+                weight: 600,
+              },
+              maxRotation: 0,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            border: {
+              display: false,
+            },
+            display: false,
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    };
+
+    const chart = new Chart(context, config);
+
+    return () => {
+      chart.destroy();
+    };
+  }, [chartDays]);
+
+  if (!selectedProvider) {
+    return null;
+  }
+
+  return (
+    <section className="usage-history no-drag">
+      <div className="usage-history__header">
+        <div className="usage-history__summary">
+          {localUsage ? (
+            <>
+              <UsageHistorySummaryItem
+                label={localUsage.todayUsageLabel}
+                modelBreakdown={localUsage.modelBreakdowns.today}
+                language={language}
+              />
+              <UsageHistorySummaryItem
+                label={localUsage.weeklyUsageLabel}
+                modelBreakdown={localUsage.modelBreakdowns.weekly}
+                language={language}
+              />
+              <UsageHistorySummaryItem
+                label={localUsage.historyUsageLabel}
+                modelBreakdown={localUsage.modelBreakdowns.history}
+                language={language}
+              />
+            </>
+          ) : (
+            <span className="usage-history__summary-item">
+              {getHistoryProviderLabel(selectedProvider)}
+            </span>
+          )}
+        </div>
+        <div className="usage-history__segmented" role="group">
+          {providers.map((provider) => (
+            <button
+              key={provider.provider}
+              className={`usage-history__segment${provider.provider === selectedProvider.provider ? " usage-history__segment--active" : ""}`}
+              type="button"
+              aria-pressed={provider.provider === selectedProvider.provider}
+              onClick={() => {
+                onSelectedProviderChange(provider.provider);
+              }}
+            >
+              {getHistoryProviderLabel(provider)}
+            </button>
+          ))}
+        </div>
+      </div>
+      {localUsage ? (
+        <div
+          className="usage-history__chart"
+          role="img"
+          aria-label={localUsage.todayUsageLabel}
+        >
+          <canvas className="usage-history__canvas" ref={canvasRef} />
+        </div>
+      ) : (
+        <div className="usage-history__empty">
+          {t(language, "usageHistoryUnavailable")}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function UsageHistorySummaryItem({
+  label,
+  modelBreakdown,
+  language,
+}: {
+  label: string;
+  modelBreakdown: NonNullable<NormalizedProviderUsage["localUsage"]>["modelBreakdown"];
+  language: WidgetLanguage;
+}) {
+  const hasBreakdown = modelBreakdown.length > 0;
+
+  return (
+    <span
+      className={`usage-history__summary-item${hasBreakdown ? " usage-history__summary-item--interactive" : ""}`}
+      tabIndex={hasBreakdown ? 0 : undefined}
+    >
+      <span className="usage-history__summary-label">{label}</span>
+      {hasBreakdown ? (
+        <span
+          className="usage-history__model-popover"
+          role="tooltip"
+          aria-label={t(language, "modelUsageBreakdown")}
+        >
+          <span className="usage-history__model-popover-title">
+            {t(language, "modelUsageBreakdown")}
+          </span>
+          <span className="usage-history__model-popover-list">
+            {modelBreakdown.map((model) => (
+              <span
+                key={model.model}
+                className="usage-history__model-popover-row"
+                title={model.detailLabel}
+              >
+                <span className="usage-history__model-popover-name">
+                  {model.model}
+                </span>
+                <span className="usage-history__model-popover-meta">
+                  {model.tokensLabel} · {model.percentLabel}
+                </span>
+              </span>
+            ))}
+          </span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function getHistoryProviderLabel(provider: NormalizedProviderUsage) {
+  return provider.provider === "agy" ? "Antigravity" : provider.displayName;
+}
+
+function getWeatherUsageColor(costUsd: number, alpha: number) {
+  const safeCost = Number.isFinite(costUsd) ? Math.max(costUsd, 0) : 0;
+  const firstStop = WEATHER_COST_STOPS[0];
+  const lastStop = WEATHER_COST_STOPS[WEATHER_COST_STOPS.length - 1];
+
+  if (safeCost <= firstStop.costUsd) {
+    return formatRgba(firstStop.rgb, alpha);
+  }
+
+  if (safeCost >= lastStop.costUsd) {
+    return formatRgba(lastStop.rgb, alpha);
+  }
+
+  const nextStopIndex = WEATHER_COST_STOPS.findIndex(
+    (stop) => stop.costUsd >= safeCost,
+  );
+  const nextStop = WEATHER_COST_STOPS[nextStopIndex];
+  const previousStop = WEATHER_COST_STOPS[nextStopIndex - 1] ?? firstStop;
+  const range = nextStop.costUsd - previousStop.costUsd || 1;
+  const ratio = (safeCost - previousStop.costUsd) / range;
+  const rgb = previousStop.rgb.map((channel, index) =>
+    Math.round(channel + (nextStop.rgb[index] - channel) * ratio),
+  ) as [number, number, number];
+
+  return formatRgba(rgb, alpha);
+}
+
+function formatRgba(rgb: readonly [number, number, number], alpha: number) {
+  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+}
+
 function ProviderMetric({
   language,
   label,
   percent,
+  displayPercent,
+  percentLabel,
+  barMode,
   resetLabel,
   level,
 }: {
   language: WidgetLanguage;
   label: string;
   percent: number;
+  displayPercent: number;
+  percentLabel: string;
+  barMode: "used" | "remaining";
   resetLabel: string;
   level: "normal" | "warning" | "danger";
 }) {
@@ -272,19 +704,19 @@ function ProviderMetric({
     <div className="metric-row">
       <div className="metric-row__copy">
         <span className="metric-row__label">{label}</span>
-        <strong className="metric-row__value">{Math.round(percent)}%</strong>
+        <strong className="metric-row__value">{percentLabel}</strong>
       </div>
       <div
-        className="metric-row__bar"
+        className={`metric-row__bar${barMode === "remaining" ? " metric-row__bar--remaining" : ""}`}
         role="progressbar"
-        aria-label={`${label}: ${Math.round(percent)}%`}
+        aria-label={`${label}: ${percentLabel}`}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.round(Math.min(percent, 100))}
+        aria-valuenow={Math.round(Math.min(displayPercent, 100))}
       >
         <div
-          className={`metric-row__fill metric-row__fill--${level}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
+          className={`metric-row__fill metric-row__fill--${level}${barMode === "remaining" ? " metric-row__fill--remaining" : ""}`}
+          style={{ width: `${Math.min(displayPercent, 100)}%` }}
         />
       </div>
       <div className="metric-row__footer">
@@ -299,11 +731,17 @@ function CompactMetric({
   language,
   label,
   percent,
+  displayPercent,
+  percentLabel,
+  barMode,
   resetLabel,
 }: {
   language: WidgetLanguage;
   label: string;
   percent: number;
+  displayPercent: number;
+  percentLabel: string;
+  barMode: "used" | "remaining";
   resetLabel: string;
 }) {
   const level = getUsageLevel(percent);
@@ -311,19 +749,19 @@ function CompactMetric({
     <div className="compact-metric">
       <div className="compact-metric__header">
         <span className="compact-metric__label">{label}</span>
-        <strong className="compact-metric__value">{Math.round(percent)}%</strong>
+        <strong className="compact-metric__value">{percentLabel}</strong>
       </div>
       <div
-        className="compact-metric__bar"
+        className={`compact-metric__bar${barMode === "remaining" ? " compact-metric__bar--remaining" : ""}`}
         role="progressbar"
-        aria-label={`${label}: ${Math.round(percent)}%`}
+        aria-label={`${label}: ${percentLabel}`}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.round(Math.min(percent, 100))}
+        aria-valuenow={Math.round(Math.min(displayPercent, 100))}
       >
         <div
-          className={`compact-metric__fill compact-metric__fill--${level}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
+          className={`compact-metric__fill compact-metric__fill--${level}${barMode === "remaining" ? " compact-metric__fill--remaining" : ""}`}
+          style={{ width: `${Math.min(displayPercent, 100)}%` }}
         />
       </div>
       <div className="compact-metric__footer">

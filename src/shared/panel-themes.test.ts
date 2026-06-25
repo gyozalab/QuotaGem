@@ -14,6 +14,7 @@ describe("panel themes", () => {
       "ocean",
       "mocha",
       "linen",
+      "minimal",
       "mist",
       "sand",
       "blossom",
@@ -26,6 +27,7 @@ describe("panel themes", () => {
     const forestTheme = getPanelThemeStyles("forest");
     const mochaTheme = getPanelThemeStyles("mocha");
     const linenTheme = getPanelThemeStyles("linen");
+    const minimalTheme = getPanelThemeStyles("minimal");
     const mistTheme = getPanelThemeStyles("mist");
     const sandTheme = getPanelThemeStyles("sand");
     const blossomTheme = getPanelThemeStyles("blossom");
@@ -44,6 +46,14 @@ describe("panel themes", () => {
     expect(linenTheme["--panel-color-scheme"]).toBe("light");
     expect(linenTheme["--panel-text-rgb"]).toBe("60, 46, 35");
     expect(linenTheme["--panel-button-text-rgb"]).toBe("60, 46, 35");
+    expect(minimalTheme["--panel-base-rgb"]).toBe("255, 255, 255");
+    expect(minimalTheme["--panel-card-rgb"]).toBe("254, 254, 254");
+    expect(minimalTheme["--panel-button-rgb"]).toBe("229, 229, 234");
+    expect(minimalTheme["--panel-primary-button-rgb"]).toBe("28, 28, 30");
+    expect(minimalTheme["--panel-primary-button-text-rgb"]).toBe("252, 250, 246");
+    expect(minimalTheme["--panel-checkbox-rgb"]).toBe("174, 174, 178");
+    expect(minimalTheme["--panel-tab-active-rgb"]).toBe("229, 229, 234");
+    expect(minimalTheme["--panel-card-alpha"]).toBe("0.96");
     expect(mistTheme["--panel-base-rgb"]).toBe("245, 244, 241");
     expect(mistTheme["--panel-text-rgb"]).toBe("80, 77, 74");
     expect(mistTheme["--panel-button-border-rgb"]).toBe("220, 215, 209");

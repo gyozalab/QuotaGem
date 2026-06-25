@@ -14,7 +14,7 @@ function createState({
   sessionPercent?: number;
   weeklyPercent?: number;
   health?: "available" | "stale" | "unavailable";
-  language?: "en" | "zh-TW";
+  language?: "en" | "zh-TW" | "zh-CN";
   notificationsEnabled?: boolean;
   notificationLevel?: "all" | "danger";
 } = {}): UsageDashboardState {
@@ -27,6 +27,9 @@ function createState({
         session: {
           label: "Session",
           percent: sessionPercent,
+          displayPercent: sessionPercent,
+          percentLabel: `${sessionPercent}%`,
+          barMode: "used",
           resetLabel: "Soon",
           level:
             sessionPercent >= 90
@@ -38,6 +41,9 @@ function createState({
         weekly: {
           label: "Weekly",
           percent: weeklyPercent,
+          displayPercent: weeklyPercent,
+          percentLabel: `${weeklyPercent}%`,
+          barMode: "used",
           resetLabel: "Later",
           level:
             weeklyPercent >= 90
@@ -66,6 +72,12 @@ function createState({
       panelScale: 100,
       panelOpacity: 90,
       panelTone: "charcoal",
+      codexDataSource: "official",
+      codexProviderMultiplier: 1,
+      codexDailyLimitUsd: 10,
+      codexWeeklyLimitUsd: 50,
+      codexMonthlyLimitUsd: 200,
+      codexShowRemainingUsage: false,
     },
   };
 }

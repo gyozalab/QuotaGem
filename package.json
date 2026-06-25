@@ -1,6 +1,6 @@
 {
   "name": "quota-gem",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Windows tray utility for unified Codex and Claude usage visibility under the QuotaGem brand.",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -24,6 +24,9 @@
       "node_modules/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/@ccusage/**/*"
+    ],
     "extraResources": [
       {
         "from": "public/tray-icon-runtime.png",
@@ -34,7 +37,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/quota-gem-app-icon.png"
@@ -61,6 +66,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "ccusage": "^20.0.14",
+    "chart.js": "^4.5.0",
     "electron-store": "^11.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
