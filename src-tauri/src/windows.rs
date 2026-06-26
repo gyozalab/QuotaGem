@@ -357,10 +357,23 @@ pub fn toggle_preferred_panel(app: &AppHandle) -> tauri::Result<()> {
     } else {
         EXPANDED_WINDOW_LABEL
     };
-    let is_visible = app
-        .get_webview_window(preferred_label)
-        .and_then(|window| window.is_visible().ok())
+    let window = app.get_webview_window(preferred_label);
+    let is_visible = window
+        .as_ref()
+        .and_then(|w| w.is_visible().ok())
         .unwrap_or(false);
+    let is_focused = window
+        .as_ref()
+        .and_then(|w| w.is_focused().ok())
+        .unwrap_or(false);
+
+    if is_visible && !is_focused {
+        if preferred_label == COMPACT_WINDOW_LABEL {
+            return show_compact_panel(app);
+        } else {
+            return show_expanded_panel(app);
+        }
+    }
 
     match panel_action(is_visible) {
         PanelAction::Hide => close_panels(app),

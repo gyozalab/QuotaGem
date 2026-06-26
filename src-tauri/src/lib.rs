@@ -185,6 +185,7 @@ async fn connect_claude(
   }
 
   let _ = windows::update_window_geometries(&app, &store);
+  let _ = windows::show_expanded_panel(&app);
   tray::update_tray_language(
     &app,
     &store.language.clone().unwrap_or_else(|| "en".to_string()),
