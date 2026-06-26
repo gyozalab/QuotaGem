@@ -1,75 +1,71 @@
 # QuotaGem
 
-English | [繁體中文](./README.zh-TW.md) | [简体中文](./README.zh-CN.md)
+繁體中文 | [English](./README.en.md)
 
-<img src="./docs/images/cover.png" alt="QuotaGem cover" width="60%" />
+<img src="./docs/images/cover.png" alt="QuotaGem 封面圖" width="60%" />
 
-QuotaGem is a Windows tray utility for keeping AI usage visible at a glance. It monitors `Claude`, `Codex`, and Google `Antigravity` style usage surfaces, with support for local usage history where desktop data is available.
 
-It is built for one quiet job: help you see quota pressure before you hit it.
+一個為 `Claude` 與 `Codex` 用量而生的 Windows 系統匣小工具。
 
-## Preview
+它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
 
-### Large Panel
+- 目前用量
+- Session 與 Weekly 狀態
+- 重設時間
+- 警告與危險門檻
 
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem large panel" width="66%" />
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="45%" />
 
-### Compact Panel
+## 畫面預覽
 
-<img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
+### 精簡面板
 
-### Focused Views
+<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="45%" />
+
+### 單獨顯示 Claude 或 Codex
 
 <p>
-  <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
-  <img src="./docs/images/only-codex.png" alt="QuotaGem Codex-only view" width="49%" />
+  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="33%" />
+  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="33%" />
 </p>
 
-### Settings
+### 設定面板
 
-<img src="./docs/images/settings-panel.png" alt="QuotaGem settings panel" width="66%" />
+<img src="./docs/images/settings-panel.png" alt="QuotaGem 設定面板" width="49%" />
 
-### Light Theme
+### 淺色主題
 
-<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem light panel" width="66%" />
+<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="49%" />
 
-### Tray Entry
+### 系統匣圖示
 
-<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray entry" width="66%" />
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="25%" />
 
-## Features
+## 你可以期待什麼
 
-- Tray-first Windows experience with quick open and hide behavior.
-- Large and compact panels for different desktop layouts.
-- Provider visibility filters: show all providers, only Claude, only Codex, or only Antigravity.
-- Codex data source options: official data or local desktop data.
-- Local usage history powered by `ccusage` where supported local files exist.
-- Daily, weekly, monthly, and historical token/cost summaries.
-- Recent 7-day usage chart with hover details.
-- Optional remaining-usage display per provider.
-- Configurable warning and danger thresholds.
-- Notifications for usage pressure.
-- Themes, scale, transparency, time format, date format, and language settings.
-- English, Traditional Chinese, and Simplified Chinese UI language support.
+- 系統匣常駐，打開就看
+- `expanded` 與 `compact` 兩種面板
+- 同時查看 `Claude` 與 `Codex`
+- 也可以單獨只顯示 `Claude` 或 `Codex`
+- 自訂警告與危險門檻
+- 背景通知提醒
+- 可調整主題、透明度與縮放
+- 內建 `Connect Claude` 流程
 
-## Data Sources
+## 為什麼做這個
 
-QuotaGem combines provider status with local history when available:
+QuotaGem 想解決的是很簡單的一件事：
 
-- `Claude`: usage status from the connected desktop/session flow, plus local history when compatible data exists.
-- `Codex`: official data by default, with an optional local data source from the user's `.codex` directory.
-- `Antigravity`: local usage detection where compatible data exists.
-- Local token and cost summaries use `ccusage` model breakdowns when possible.
+當你在高頻使用 AI 工具時，不應該等到額度快撞線了才發現。
 
-Local usage is read from files already present on your machine. QuotaGem does not need your model API keys for local history parsing.
+它不是大型 dashboard，也不是複雜的管理平台。  
+它比較像一顆安靜地待在桌面角落的小寶石，讓你隨時知道現在的使用狀態。
 
-## Download
+## 下載使用
 
-Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest `QuotaGem-*.exe`.
+前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的 `QuotaGem-*.exe`，直接執行即可，免安裝。
 
-The Windows build is portable: run the `.exe` directly.
-
-## Development
+## 開發者
 
 ```powershell
 git clone https://github.com/gyozalab/QuotaGem.git
@@ -77,16 +73,3 @@ cd QuotaGem
 npm install
 npm run dev
 ```
-
-## Build
-
-```powershell
-npm run build
-.\node_modules\.bin\electron-builder.cmd --win --x64
-```
-
-The packaged output is written to `release/`.
-
-## Notes
-
-QuotaGem is an independent desktop utility. Provider names are used only to describe the usage surfaces the app helps you monitor.
