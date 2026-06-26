@@ -95,8 +95,8 @@ async fn save_settings(
   }
 
   let _ = windows::update_window_geometries(&app, &store);
+  let _ = windows::show_expanded_panel(&app);
 
-  // 語言可能改變 → 即時重建托盤選單語言（對齊 1.0 save 時更新托盤）
   tray::update_tray_language(
     &app,
     &store.language.clone().unwrap_or_else(|| "en".to_string()),
@@ -247,6 +247,7 @@ pub fn run() {
     .plugin(tauri_plugin_autostart::Builder::default().build())
     .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())
+    .manage(windows::PanelDismissed::default())
     .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,

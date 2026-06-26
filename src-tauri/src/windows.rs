@@ -1,8 +1,17 @@
 use crate::models::{coerce_provider_visibility, load_settings, AppStore};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     App, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
+
+pub struct PanelDismissed(AtomicBool);
+
+impl Default for PanelDismissed {
+    fn default() -> Self {
+        Self(AtomicBool::new(true))
+    }
+}
 
 const COMPACT_WINDOW_LABEL: &str = "compact";
 const EXPANDED_WINDOW_LABEL: &str = "main";
@@ -248,6 +257,7 @@ pub fn show_compact_panel(app: &AppHandle) -> tauri::Result<()> {
     compact.show()?;
     compact.set_focus()?;
     compact.emit("usage:refreshRequested", ())?;
+    app.state::<PanelDismissed>().0.store(false, Ordering::Relaxed);
     Ok(())
 }
 
@@ -302,6 +312,7 @@ pub fn show_expanded_panel(app: &AppHandle) -> tauri::Result<()> {
     expanded.show()?;
     expanded.set_focus()?;
     expanded.emit("usage:refreshRequested", ())?;
+    app.state::<PanelDismissed>().0.store(false, Ordering::Relaxed);
     Ok(())
 }
 
@@ -347,38 +358,22 @@ pub fn close_panels(app: &AppHandle) -> tauri::Result<()> {
     if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {
         compact.hide()?;
     }
+    app.state::<PanelDismissed>().0.store(true, Ordering::Relaxed);
     Ok(())
 }
 
 pub fn toggle_preferred_panel(app: &AppHandle) -> tauri::Result<()> {
+    let dismissed = app.state::<PanelDismissed>().0.load(Ordering::Relaxed);
     let settings = load_settings();
-    let preferred_label = if settings.preferred_display_mode.as_deref() == Some("compact") {
-        COMPACT_WINDOW_LABEL
-    } else {
-        EXPANDED_WINDOW_LABEL
-    };
-    let window = app.get_webview_window(preferred_label);
-    let is_visible = window
-        .as_ref()
-        .and_then(|w| w.is_visible().ok())
-        .unwrap_or(false);
-    let is_focused = window
-        .as_ref()
-        .and_then(|w| w.is_focused().ok())
-        .unwrap_or(false);
 
-    if is_visible && !is_focused {
-        if preferred_label == COMPACT_WINDOW_LABEL {
-            return show_compact_panel(app);
+    if dismissed {
+        if settings.preferred_display_mode.as_deref() == Some("compact") {
+            show_compact_panel(app)
         } else {
-            return show_expanded_panel(app);
+            show_expanded_panel(app)
         }
-    }
-
-    match panel_action(is_visible) {
-        PanelAction::Hide => close_panels(app),
-        PanelAction::Show if preferred_label == COMPACT_WINDOW_LABEL => show_compact_panel(app),
-        PanelAction::Show => show_expanded_panel(app),
+    } else {
+        close_panels(app)
     }
 }
 
