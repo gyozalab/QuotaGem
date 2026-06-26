@@ -2,6 +2,8 @@
 
 繁體中文 | [English](./README.en.md)
 
+<img src="./docs/images/cover.png" alt="QuotaGem" width="100%" />
+
 一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windows 系統匣小工具。
 
 它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
@@ -10,8 +12,6 @@
 - 五小時（Session）與每週（Weekly）狀態
 - 重設時間
 - 警告與危險門檻
-
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
 ## 2.0 有什麼新的
 
@@ -23,7 +23,9 @@
 
 ## 畫面預覽
 
-> README 圖片需要重截時，請照 [README 截圖更新指南](./docs/screenshot-guide.md) 的檔名與畫面狀態替換。
+### 展開面板
+
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
 ### 精簡面板
 

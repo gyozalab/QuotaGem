@@ -2,6 +2,8 @@
 
 [繁體中文](./README.md) | English
 
+<img src="./docs/images/cover.png" alt="QuotaGem" width="100%" />
+
 A Windows tray app for keeping `Claude`, `Codex`, and `Antigravity` usage visible without living in browser tabs.
 
 It helps you check:
@@ -10,8 +12,6 @@ It helps you check:
 - five-hour (session) and weekly status
 - reset times
 - warning and danger thresholds
-
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
 
 ## What's New in 2.0
 
@@ -23,7 +23,9 @@ It helps you check:
 
 ## Screenshots
 
-> When refreshing README images, follow the filename and capture-state checklist in [README screenshot guide](./docs/screenshot-guide.md).
+### Expanded panel
+
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
 
 ### Compact panel
 
