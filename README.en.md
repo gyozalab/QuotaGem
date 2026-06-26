@@ -2,67 +2,95 @@
 
 [繁體中文](./README.md) | English
 
-A Windows tray app for keeping `Claude` and `Codex` usage visible without living in browser tabs.
+QuotaGem is a Windows tray utility for keeping `Claude`, `Codex`, and `Antigravity` usage visible at a glance.
 
-With QuotaGem, you can quickly check:
+It helps you check:
 
 - current usage
-- session and weekly status
+- five-hour and weekly quota status
 - reset times
 - warning and danger thresholds
 
 <img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
 
-## Screenshots
+## What's New in 2.0
 
-### Compact panel
+- Rewritten on Tauri 2, with Rust handling the tray shell, windows, providers, notifications, and launch-at-login.
+- Adds `Antigravity` as a provider, split into `Gemini` and `Claude and GPT` quota groups.
+- Redesigns compact mode around usage rings, showing five-hour usage first and weekly usage in hover details and expanded mode.
+- Uses full-row progress bars in expanded mode, with Antigravity shown per model group.
+- Adds single-instance protection so reopening or autostart keeps only one QuotaGem process.
+- Uses the portable zip as the recommended Windows release artifact for now.
+
+## Preview
+
+### Compact Panel
 
 <img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
 
-### Claude-only or Codex-only view
+### Claude-only or Codex-only View
 
 <p>
   <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
   <img src="./docs/images/only-codex.png" alt="QuotaGem Codex-only view" width="49%" />
 </p>
 
-### Settings panel
+### Settings Panel
 
 <img src="./docs/images/settings-panel.png" alt="QuotaGem settings panel" width="66%" />
 
-### Light theme
+### Light Theme
 
 <img src="./docs/images/expanded-panel-white.png" alt="QuotaGem light expanded panel" width="66%" />
 
-### Tray icon
+### Tray Icon
 
-<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="66%" />
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="33%" />
 
-## What It Offers
+## Data Sources
 
-- A calm tray-first experience
-- `expanded` and `compact` panels
-- Unified view for `Claude` and `Codex`
-- A dedicated `Claude`-only or `Codex`-only view when you want less noise
-- Custom warning and danger thresholds
-- Background notifications
-- Theme, transparency, and scale controls
-- Built-in `Connect Claude` flow
+### Claude
 
-## Why It Exists
+QuotaGem uses the built-in `Connect Claude` flow to store the required session information, then reads Claude usage from the backend directly. Version 2.0 no longer depends on a hidden browser window.
 
-QuotaGem is meant for a simple problem:
+### Codex
 
-when you use AI tools heavily, you should not discover your limits too late.
+QuotaGem reads the newest local session record under `.codex/sessions`, finds the latest `token_count` event, and displays the current rate-limit state.
 
-It is not trying to be a giant dashboard or a management suite.  
-It is a small desktop companion that stays nearby and tells you what matters at a glance.
+### Antigravity
+
+QuotaGem detects the signed-in local Antigravity language server and calls a read-only quota summary RPC. It only reads quota data. It does not send prompts or consume model quota.
+
+## Features
+
+- Tray-first Windows experience with left-click panel toggling and a right-click menu.
+- `compact` and `expanded` panel modes.
+- Per-provider visibility controls for Claude, Codex, and Antigravity.
+- Five-hour and weekly usage visualization.
+- Custom warning and danger thresholds.
+- Windows notifications, with all-alerts or danger-only modes.
+- Cross-refresh alert deduplication.
+- Automatic refresh and manual refresh.
+- Dark and light themes.
+- Transparency, scale, time format, and date format settings.
+- Traditional Chinese and English UI languages.
+- Launch-at-login support. For portable builds, running the moved exe once refreshes the startup path.
 
 ## Download
 
-Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest `QuotaGem-*.exe`. Run it directly — no installation needed.
+Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest portable package:
 
-## For Developers
+```text
+QuotaGem_2.0.0_x64-portable.zip
+```
+
+Extract it and run `quotagem.exe`. To start QuotaGem with Windows, enable launch-at-login from the settings panel.
+
+For now, the portable zip is the recommended Windows artifact. MSI / NSIS installers may still be produced by the build, but they should wait for code signing and Microsoft Defender false-positive review before becoming the default download.
+
+## Development
+
+QuotaGem 2.0 is built with Tauri 2, Rust, React, and TypeScript.
 
 ```powershell
 git clone https://github.com/gyozalab/QuotaGem.git
@@ -71,17 +99,21 @@ npm install
 npm run dev
 ```
 
-## Current Status
+## Build
 
-The core experience is already working:
+```powershell
+npm test
+npm run build
+npm run tauri:build
+npm run package:portable
+```
 
-- panel switching is in place
-- QuotaGem branding is live
-- notifications, thresholds, date formats, and panel scaling are done
-- the project now lives in its own standalone repository
+The portable zip is written to:
 
-## Next Up
+```text
+src-tauri\target\release\bundle\portable\QuotaGem_2.0.0_x64-portable.zip
+```
 
-- prepare the Windows `.exe` packaging flow
-- verify launch-at-login and tray behavior in the packaged app
-- keep refining the experience based on real usage
+## Screenshot Maintenance
+
+The README image list and capture states are documented in [README screenshot guide](./docs/screenshot-guide.md).

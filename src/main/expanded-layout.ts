@@ -1,15 +1,18 @@
-import { getExpandedBaseSize } from "./panel-layout";
-
-const EXPANDED_PANEL_MAX_HEIGHT = 850;
-const EXPANDED_PANEL_MIN_HEIGHT = getExpandedBaseSize().height;
+const EXPANDED_PANEL_MAX_HEIGHT = 680;
+const EXPANDED_PANEL_MIN_HEIGHT = 220;
+const EXPANDED_SETTINGS_HEIGHT = 500;
 
 export function getExpandedWindowHeight({
   contentHeight,
-  settingsOpen: _settingsOpen,
+  settingsOpen,
 }: {
   contentHeight: number;
   settingsOpen: boolean;
 }): number {
+  if (settingsOpen) {
+    return EXPANDED_SETTINGS_HEIGHT;
+  }
+
   if (!Number.isFinite(contentHeight) || contentHeight <= 0) {
     return EXPANDED_PANEL_MAX_HEIGHT;
   }

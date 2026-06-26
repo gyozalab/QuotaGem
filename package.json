@@ -1,6 +1,6 @@
 {
   "name": "quota-gem",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Windows tray utility for unified Codex and Claude usage visibility under the QuotaGem brand.",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
+    "tauri": "tauri",
+    "tauri:build": "tauri build",
+    "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
     "package": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run build && electron-builder --win --x64"
   },
   "build": {
@@ -23,9 +26,6 @@
       "dist-electron/**/*",
       "node_modules/**/*",
       "package.json"
-    ],
-    "asarUnpack": [
-      "node_modules/@ccusage/**/*"
     ],
     "extraResources": [
       {
@@ -66,13 +66,13 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "ccusage": "^20.0.14",
-    "chart.js": "^4.5.0",
+    "@tauri-apps/api": "^2.11.1",
     "electron-store": "^11.0.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

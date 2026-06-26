@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,18 +17,12 @@ function createDashboardState(
         session: {
           label: "Session",
           percent: 10,
-          displayPercent: 10,
-          percentLabel: "10%",
-          barMode: "used",
           resetLabel: "Soon",
           level: "normal",
         },
         weekly: {
           label: "Weekly",
           percent: 20,
-          displayPercent: 20,
-          percentLabel: "20%",
-          barMode: "used",
           resetLabel: "Later",
           level: "normal",
         },
@@ -38,7 +32,7 @@ function createDashboardState(
     lastUpdatedLabel: "Updated just now",
     preferences: {
       preferredDisplayMode: "expanded",
-      providerVisibility: "both",
+      providerVisibility: { claude: true, codex: true, antigravity: true },
       refreshIntervalMinutes: 5,
       warningThreshold: 75,
       dangerThreshold: 90,
@@ -52,24 +46,17 @@ function createDashboardState(
       panelOpacity: 90,
       panelTone: "charcoal",
       launchAtLogin: false,
-      codexDataSource: "official",
-      codexProviderMultiplier: 1,
-      codexDailyLimitUsd: 10,
-      codexWeeklyLimitUsd: 50,
-      codexMonthlyLimitUsd: 200,
-      claudeShowRemainingUsage: false,
-      codexShowRemainingUsage: false,
-      antigravityShowRemainingUsage: false,
       ...overrides,
     },
   };
 }
 
 describe("App", () => {
-  beforeEach(() => {
-    window.history.replaceState(null, "", "/");
+  let requestSettings: () => void;
 
+  beforeEach(() => {
     const state = createDashboardState();
+    requestSettings = () => undefined;
 
     window.trayUsageWidget = {
       fetchUsageState: vi.fn().mockResolvedValue(state),
@@ -77,13 +64,26 @@ describe("App", () => {
       openExpandedPanel: vi.fn().mockResolvedValue(undefined),
       openCompactPanel: vi.fn().mockResolvedValue(undefined),
       closePanels: vi.fn().mockResolvedValue(undefined),
+      refreshUsage: vi.fn().mockResolvedValue(undefined),
       connectClaude: vi.fn().mockResolvedValue(state),
-      connectAntigravity: vi.fn().mockResolvedValue(state),
       saveSettings: vi.fn().mockImplementation(async (preferences) =>
         createDashboardState(preferences),
       ),
       onRefreshRequested: vi.fn().mockReturnValue(() => undefined),
+      onSettingsRequested: vi.fn().mockImplementation((callback) => {
+        requestSettings = callback;
+        return () => undefined;
+      }),
     };
+  });
+
+  it("opens settings when the tray menu requests it", async () => {
+    render(<App />);
+    await screen.findByText("Updated just now");
+
+    act(() => requestSettings());
+
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeVisible();
   });
 
   it("lets people toggle launch at login from settings and saves the preference", async () => {
@@ -118,8 +118,6 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    await userEvent.click(await screen.findByRole("tab", { name: "Alerts" }));
-
     const warningThreshold = await screen.findByLabelText("Warning threshold");
     const dangerThreshold = await screen.findByLabelText("Danger threshold");
 
@@ -145,8 +143,6 @@ describe("App", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
-
-    await userEvent.click(await screen.findByRole("tab", { name: "Alerts" }));
 
     const notificationsEnabled = await screen.findByLabelText(
       "Enable notifications",
@@ -176,8 +172,6 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    await userEvent.click(await screen.findByRole("tab", { name: "Appearance" }));
-
     const panelScale = await screen.findByRole("slider", {
       name: "Panel scale: 100%",
     });
@@ -201,22 +195,18 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    await userEvent.click(await screen.findByRole("tab", { name: "Appearance" }));
-
     const panelTone = await screen.findByLabelText("Panel background color");
 
-    expect(screen.getByRole("option", { name: "Minimal" })).toBeInTheDocument();
-
-    await userEvent.selectOptions(panelTone, "minimal");
+    await userEvent.selectOptions(panelTone, "linen");
     await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
 
     await waitFor(() => {
-      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
-        expect.objectContaining({
-          panelTone: "minimal",
-        }),
-      );
-    });
+        expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+          expect.objectContaining({
+          panelTone: "linen",
+          }),
+        );
+      });
   });
 
   it("lets people choose a date format from settings", async () => {
@@ -225,8 +215,6 @@ describe("App", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
-
-    await userEvent.click(await screen.findByRole("tab", { name: "Time" }));
 
     const dateFormat = await screen.findByLabelText("Date format");
 
@@ -242,180 +230,46 @@ describe("App", () => {
     });
   });
 
-  it("shows Simplified Chinese in the language selector", async () => {
+  it("lets people choose a language from settings and saves the preference", async () => {
     render(<App />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    expect(
-      await screen.findByRole("option", { name: "Simplified Chinese" }),
-    ).toBeInTheDocument();
-  });
+    const languageSelect = await screen.findByLabelText("Language");
 
-  it("lets people show only Antigravity from provider visibility", async () => {
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-
-    const providerVisibility = await screen.findByLabelText("Show providers");
-
-    expect(screen.getByRole("option", { name: "Show all" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "Antigravity only" }),
-    ).toBeInTheDocument();
-
-    await userEvent.selectOptions(providerVisibility, "agy");
-    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+    await userEvent.selectOptions(languageSelect, "zh-TW");
+    await userEvent.click(screen.getByRole("button", { name: "儲存設定" }));
 
     await waitFor(() => {
       expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
         expect.objectContaining({
-          providerVisibility: "agy",
+          language: "zh-TW",
         }),
       );
     });
   });
 
-  it("organizes settings into General, Codex, Claude, and Antigravity tabs", async () => {
+  it("lets people choose a time display and format from settings", async () => {
     render(<App />);
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    expect(await screen.findByRole("tab", { name: "General" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.queryByLabelText("Codex data source")).not.toBeInTheDocument();
+    const timeDisplay = await screen.findByLabelText("Reset time timezone");
+    const timeFormat = await screen.findByLabelText("Time display format");
 
-    await userEvent.click(screen.getByRole("tab", { name: "Codex" }));
-
-    expect(await screen.findByLabelText("Codex data source")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("tab", { name: "Claude" }));
-
-    expect(
-      await screen.findByRole("button", { name: "Connect Claude" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(
-        "Codex usage is auto-detected from your local desktop data. Claude works best through the login window below.",
-      ),
-    ).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("tab", { name: "Antigravity" }));
-
-    expect(
-      await screen.findByRole("button", { name: "Connect Antigravity" }),
-    ).toBeInTheDocument();
-  });
-
-  it("saves remaining-usage display independently for Claude and Antigravity", async () => {
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-
-    await userEvent.click(screen.getByRole("tab", { name: "Claude" }));
-    await userEvent.click(await screen.findByLabelText("Show remaining usage"));
-
-    await userEvent.click(screen.getByRole("tab", { name: "Antigravity" }));
-    await userEvent.click(await screen.findByLabelText("Show remaining usage"));
-
+    await userEvent.selectOptions(timeDisplay, "local");
+    await userEvent.selectOptions(timeFormat, "12h");
     await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
 
     await waitFor(() => {
       expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
         expect.objectContaining({
-          claudeShowRemainingUsage: true,
-          codexShowRemainingUsage: false,
-          antigravityShowRemainingUsage: true,
-        }),
-      );
-    });
-  });
-
-  it("opens the Antigravity connection action from settings", async () => {
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("tab", { name: "Antigravity" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Connect Antigravity" }),
-    );
-
-    await waitFor(() => {
-      expect(window.trayUsageWidget.connectAntigravity).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("splits General settings into Behavior, Alerts, Time, and Appearance subtabs", async () => {
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-
-    expect(await screen.findByRole("tab", { name: "Behavior" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.queryByLabelText("Panel background color")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("tab", { name: "Appearance" }));
-    expect(await screen.findByLabelText("Panel background color")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("tab", { name: "Time" }));
-    expect(await screen.findByLabelText("Date format")).toBeInTheDocument();
-  });
-
-  it("lets people switch Codex to local data and set provider limits", async () => {
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-
-    await userEvent.click(await screen.findByRole("tab", { name: "Codex" }));
-
-    const codexDataSource = await screen.findByLabelText("Codex data source");
-
-    await userEvent.selectOptions(codexDataSource, "local");
-    await userEvent.click(screen.getByLabelText("Show remaining usage"));
-
-    const providerMultiplier = await screen.findByLabelText(
-      "Provider multiplier: x1.0",
-    );
-
-    await userEvent.clear(providerMultiplier);
-    await userEvent.type(providerMultiplier, "1.7");
-    await userEvent.clear(screen.getByLabelText("Daily limit ($)"));
-    await userEvent.type(screen.getByLabelText("Daily limit ($)"), "12.5");
-    await userEvent.clear(screen.getByLabelText("Weekly limit ($)"));
-    await userEvent.type(screen.getByLabelText("Weekly limit ($)"), "60");
-    await userEvent.clear(screen.getByLabelText("Monthly limit ($)"));
-    await userEvent.type(screen.getByLabelText("Monthly limit ($)"), "240");
-    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
-
-    await waitFor(() => {
-      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
-        expect.objectContaining({
-          codexDataSource: "local",
-          codexProviderMultiplier: 1.7,
-          codexDailyLimitUsd: 12.5,
-          codexWeeklyLimitUsd: 60,
-          codexMonthlyLimitUsd: 240,
-          codexShowRemainingUsage: true,
+          timeDisplay: "local",
+          timeFormat: "12h",
         }),
       );
     });
@@ -496,7 +350,7 @@ describe("App", () => {
     rectSpy.mockRestore();
   });
 
-  it("tells the main process to keep the current expanded height while settings are open", async () => {
+  it("tells the main process to keep the full height while settings are open", async () => {
     const rectSpy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockReturnValue({
@@ -537,19 +391,6 @@ describe("App", () => {
     );
 
     expect(screen.queryByText("10%")).not.toBeInTheDocument();
-  });
-
-  it("opens settings in place from the compact surface toolbar", async () => {
-    window.history.replaceState(null, "", "/?mode=compact");
-
-    render(<App />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Open settings" }),
-    );
-
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.queryByText("Updated just now")).not.toBeInTheDocument();
   });
 
   it("hides manual Claude credential fields from settings", async () => {

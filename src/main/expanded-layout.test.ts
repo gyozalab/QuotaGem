@@ -3,34 +3,34 @@ import { describe, expect, it } from "vitest";
 import { getExpandedWindowHeight } from "./expanded-layout";
 
 describe("getExpandedWindowHeight", () => {
-  it("keeps the default expanded panel height when measured content is shorter", () => {
+  it("uses the measured content height when it is within bounds", () => {
     expect(
       getExpandedWindowHeight({
         contentHeight: 318,
         settingsOpen: false,
       }),
-    ).toBe(500);
+    ).toBe(318);
   });
 
-  it("uses the measured content height when it is taller than the default", () => {
+  it("allows all three provider cards to exceed the old 500px cap", () => {
     expect(
       getExpandedWindowHeight({
-        contentHeight: 620,
+        contentHeight: 640,
         settingsOpen: false,
       }),
-    ).toBe(620);
+    ).toBe(640);
   });
 
-  it("caps the height when content would exceed the expanded panel maximum", () => {
+  it("retains a safety cap for exceptionally tall content", () => {
     expect(
       getExpandedWindowHeight({
         contentHeight: 900,
         settingsOpen: false,
       }),
-    ).toBe(850);
+    ).toBe(680);
   });
 
-  it("keeps the default expanded panel height while settings are open", () => {
+  it("keeps the full height while settings are open", () => {
     expect(
       getExpandedWindowHeight({
         contentHeight: 318,

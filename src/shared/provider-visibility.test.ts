@@ -1,97 +1,101 @@
 import { describe, expect, it } from "vitest";
 
 import type { NormalizedProviderUsage } from "./usage";
-import { filterProvidersByVisibility } from "./provider-visibility";
+import {
+  coerceProviderVisibility,
+  filterProvidersByVisibility,
+} from "./provider-visibility";
 
 const providers: NormalizedProviderUsage[] = [
   {
     provider: "claude",
     displayName: "Claude",
     health: "available",
-    session: {
-      label: "Session",
-      percent: 42,
-      displayPercent: 42,
-      percentLabel: "42%",
-      barMode: "used",
-      resetLabel: "Soon",
-      level: "normal",
-    },
-    weekly: {
-      label: "Weekly",
-      percent: 58,
-      displayPercent: 58,
-      percentLabel: "58%",
-      barMode: "used",
-      resetLabel: "Later",
-      level: "normal",
-    },
+    session: { label: "Session", percent: 42, resetLabel: "Soon", level: "normal" },
+    weekly: { label: "Weekly", percent: 58, resetLabel: "Later", level: "normal" },
     lastUpdated: "2026-03-30T01:00:00.000Z",
   },
   {
     provider: "codex",
     displayName: "Codex",
     health: "available",
-    session: {
-      label: "Session",
-      percent: 12,
-      displayPercent: 12,
-      percentLabel: "12%",
-      barMode: "used",
-      resetLabel: "Soon",
-      level: "normal",
-    },
-    weekly: {
-      label: "Weekly",
-      percent: 26,
-      displayPercent: 26,
-      percentLabel: "26%",
-      barMode: "used",
-      resetLabel: "Later",
-      level: "normal",
-    },
+    session: { label: "Session", percent: 12, resetLabel: "Soon", level: "normal" },
+    weekly: { label: "Weekly", percent: 26, resetLabel: "Later", level: "normal" },
     lastUpdated: "2026-03-30T01:00:00.000Z",
   },
   {
-    provider: "agy",
-    displayName: "Agy",
+    provider: "antigravity",
+    displayName: "Antigravity",
     health: "available",
-    session: {
-      label: "Session",
-      percent: 8,
-      displayPercent: 8,
-      percentLabel: "8%",
-      barMode: "used",
-      resetLabel: "Soon",
-      level: "normal",
-    },
-    weekly: {
-      label: "Weekly",
-      percent: 16,
-      displayPercent: 16,
-      percentLabel: "16%",
-      barMode: "used",
-      resetLabel: "Later",
-      level: "normal",
-    },
+    session: { label: "Session", percent: 1, resetLabel: "Soon", level: "normal" },
+    weekly: { label: "Weekly", percent: 4, resetLabel: "Later", level: "normal" },
     lastUpdated: "2026-03-30T01:00:00.000Z",
   },
 ];
 
 describe("filterProvidersByVisibility", () => {
-  it("keeps both providers when visibility is both", () => {
-    expect(filterProvidersByVisibility(providers, "both")).toEqual(providers);
+  it("keeps all providers when all visible", () => {
+    expect(
+      filterProvidersByVisibility(providers, {
+        claude: true,
+        codex: true,
+        antigravity: true,
+      }),
+    ).toEqual(providers);
   });
 
-  it("returns only Claude when visibility is claude", () => {
-    expect(filterProvidersByVisibility(providers, "claude")).toEqual([providers[0]]);
+  it("hides providers whose flag is false", () => {
+    expect(
+      filterProvidersByVisibility(providers, {
+        claude: true,
+        codex: false,
+        antigravity: false,
+      }),
+    ).toEqual([providers[0]]);
   });
 
-  it("returns only Codex when visibility is codex", () => {
-    expect(filterProvidersByVisibility(providers, "codex")).toEqual([providers[1]]);
+  it("treats a missing flag as visible", () => {
+    expect(
+      filterProvidersByVisibility(
+        providers,
+        { claude: false, codex: true } as unknown as Parameters<
+          typeof filterProvidersByVisibility
+        >[1],
+      ),
+    ).toEqual([providers[1], providers[2]]);
+  });
+});
+
+describe("coerceProviderVisibility", () => {
+  it("maps legacy 'both' to all visible", () => {
+    expect(coerceProviderVisibility("both")).toEqual({
+      claude: true,
+      codex: true,
+      antigravity: true,
+    });
   });
 
-  it("returns only Antigravity when visibility is agy", () => {
-    expect(filterProvidersByVisibility(providers, "agy")).toEqual([providers[2]]);
+  it("maps legacy 'claude' to claude-only", () => {
+    expect(coerceProviderVisibility("claude")).toEqual({
+      claude: true,
+      codex: false,
+      antigravity: false,
+    });
+  });
+
+  it("passes through a map, defaulting missing keys to visible", () => {
+    expect(coerceProviderVisibility({ codex: false })).toEqual({
+      claude: true,
+      codex: false,
+      antigravity: true,
+    });
+  });
+
+  it("defaults unknown input to all visible", () => {
+    expect(coerceProviderVisibility(undefined)).toEqual({
+      claude: true,
+      codex: true,
+      antigravity: true,
+    });
   });
 });

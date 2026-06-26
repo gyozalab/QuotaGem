@@ -7,7 +7,6 @@ import {
   Notification,
   screen,
   session,
-  shell,
   Tray,
 } from "electron";
 import Store from "electron-store";
@@ -15,11 +14,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { UsageDashboardState } from "../shared/dashboard";
-import {
-  normalizeWidgetLanguage,
-  resolveWidgetLanguageFromSystemLocale,
-  t,
-} from "../shared/i18n";
+import { t } from "../shared/i18n";
+import { coerceProviderVisibility } from "../shared/provider-visibility";
 import {
   getLaunchAtLoginRuntime,
   readLaunchAtLoginPreference,
@@ -40,11 +36,6 @@ import { resolveTrayIconPath } from "./runtime-paths";
 import { createUsageAlertTracker } from "./usage-alerts";
 import { getPanelScaleFactor, normalizePanelScale } from "../shared/panel-scale";
 import { normalizeUsageThresholds } from "../shared/usage";
-import {
-  normalizeCodexProviderMultiplier,
-  normalizeCodexUsdLimit,
-} from "../providers/codex";
-import type { ProviderId } from "../shared/usage";
 
 let expandedWindow: BrowserWindow | null = null;
 let compactWindow: BrowserWindow | null = null;
@@ -54,7 +45,6 @@ let refreshTimer: NodeJS.Timeout | null = null;
 let usageAlertsPrimed = false;
 
 const WINDOW_MARGIN = 14;
-const ANTIGRAVITY_URL = "https://antigravity.google/";
 const launchAtLoginRuntime = getLaunchAtLoginRuntime();
 let expandedWindowHeight = getExpandedBaseSize().height;
 const usageAlertTracker = createUsageAlertTracker();
@@ -64,26 +54,19 @@ const store = new Store<AppStoreShape>({
   defaults: {
     preferredDisplayMode: "expanded",
     launchAtLogin: false,
-    providerVisibility: "both",
+    providerVisibility: { claude: true, codex: true, antigravity: true },
     refreshIntervalMinutes: 5,
     warningThreshold: 75,
     dangerThreshold: 90,
     notificationsEnabled: true,
     notificationLevel: "all",
+    language: "en",
     timeDisplay: "utc",
     timeFormat: "24h",
     dateFormat: "iso",
     panelScale: 100,
     panelOpacity: 90,
     panelTone: "charcoal",
-    codexDataSource: "official",
-    codexProviderMultiplier: 1,
-    codexDailyLimitUsd: 10,
-    codexWeeklyLimitUsd: 50,
-    codexMonthlyLimitUsd: 200,
-    claudeShowRemainingUsage: false,
-    codexShowRemainingUsage: false,
-    antigravityShowRemainingUsage: false,
   },
 });
 
@@ -130,6 +113,7 @@ function createCompactWindow() {
     mode: "compact",
     panelScale: getCurrentPanelScale(),
     expandedWindowHeight,
+    compactProviderCount: getCompactProviderCount(),
   });
   compactWindow = new BrowserWindow({
     width: size.width,
@@ -181,16 +165,11 @@ function createTray() {
     userDataPath: app.getPath("userData"),
   });
   const image = nativeImage.createFromPath(iconPath).resize({ width: 20, height: 20 });
-  image.setTemplateImage(true);
-  const language = getCurrentLanguage();
+  const language = store.get("language", "en");
 
   tray = new Tray(image);
   tray.setToolTip(t(language, "trayUsageWidget"));
-  let lastTrayClick = 0;
   tray.on("click", () => {
-    const now = Date.now();
-    if (now - lastTrayClick < 300) return;
-    lastTrayClick = now;
     togglePreferredWindow();
   });
   tray.on("right-click", () => {
@@ -213,7 +192,7 @@ function createTray() {
 }
 
 function buildTrayMenu() {
-  const language = getCurrentLanguage();
+  const language = store.get("language", "en");
   return Menu.buildFromTemplate([
     {
       label: t(language, "openUsagePanel"),
@@ -362,23 +341,6 @@ function getCurrentPanelScale(): number {
   return normalizePanelScale(store.get("panelScale", 100));
 }
 
-function getCurrentLanguage() {
-  return normalizeWidgetLanguage(store.get("language", "en"));
-}
-
-function initializeLanguagePreference(): void {
-  if (store.has("language")) {
-    const normalizedLanguage = getCurrentLanguage();
-    store.set("language", normalizedLanguage);
-    return;
-  }
-
-  store.set(
-    "language",
-    resolveWidgetLanguageFromSystemLocale(app.getLocale()),
-  );
-}
-
 function applyPanelScale(window: BrowserWindow | null): void {
   if (!window || window.isDestroyed()) {
     return;
@@ -390,12 +352,12 @@ function applyPanelScale(window: BrowserWindow | null): void {
 function syncWindowLayouts(): void {
   if (expandedWindow) {
     applyPanelScale(expandedWindow);
-    positionWindow(expandedWindow, "expanded", { preservePosition: true });
+    positionWindow(expandedWindow, "expanded");
   }
 
   if (compactWindow) {
     applyPanelScale(compactWindow);
-    positionWindow(compactWindow, "compact", { preservePosition: true });
+    positionWindow(compactWindow, "compact");
   }
 }
 
@@ -454,68 +416,37 @@ function processUsageAlerts(state: UsageDashboardState): void {
 }
 
 async function fetchDashboardState(): Promise<UsageDashboardState> {
-  const state = await buildDashboardState(
-    store,
-    getLaunchAtLoginPreference(),
-    {
-      visibleProviders: getVisibleProviderIds(),
-    },
-  );
+  const state = await buildDashboardState(store, getLaunchAtLoginPreference());
   processUsageAlerts(state);
   return state;
-}
-
-function getVisibleProviderIds(): ProviderId[] {
-  const visibility = store.get("providerVisibility", "both");
-
-  if (visibility === "claude") {
-    return ["claude"];
-  }
-
-  if (visibility === "codex") {
-    return ["codex"];
-  }
-
-  if (visibility === "agy") {
-    return ["agy"];
-  }
-
-  return ["claude", "codex", "agy"];
 }
 
 function positionWindow(
   window: BrowserWindow,
   mode: "expanded" | "compact",
-  options: { preservePosition?: boolean } = {},
 ) {
   const workArea = screen.getPrimaryDisplay().workArea;
   const size = getPanelSize({
     mode,
     panelScale: getCurrentPanelScale(),
     expandedWindowHeight,
+    compactProviderCount: getCompactProviderCount(),
   });
-  const currentBounds = options.preservePosition ? window.getBounds() : null;
-
-  const wasResizable = window.isResizable();
-  if (!wasResizable) {
-    window.setResizable(true);
-  }
 
   window.setBounds({
     width: size.width,
     height: size.height,
-    x: currentBounds?.x ?? workArea.x + workArea.width - size.width - WINDOW_MARGIN,
-    y: currentBounds?.y ?? workArea.y + workArea.height - size.height - WINDOW_MARGIN,
+    x: workArea.x + workArea.width - size.width - WINDOW_MARGIN,
+    y: workArea.y + workArea.height - size.height - WINDOW_MARGIN,
   });
-
-  if (!wasResizable) {
-    window.setResizable(false);
-  }
 }
 
-app.commandLine.appendSwitch("disable-gpu");
+function getCompactProviderCount(): number {
+  const visibility = coerceProviderVisibility(store.get("providerVisibility"));
+  return Math.max(1, Object.values(visibility).filter(Boolean).length);
+}
+
 app.whenReady().then(() => {
-  initializeLanguagePreference();
   primeClaudeSession();
   syncLaunchAtLoginPreference(
     app,
@@ -550,7 +481,7 @@ app.whenReady().then(() => {
       expandedWindowHeight = nextHeight;
 
       if (expandedWindow) {
-        positionWindow(expandedWindow, "expanded", { preservePosition: true });
+        positionWindow(expandedWindow, "expanded");
       }
     },
   );
@@ -569,16 +500,6 @@ app.whenReady().then(() => {
     } catch (error) {
       throw new Error(formatClaudeCredentialError(error));
     }
-  });
-
-  ipcMain.handle("antigravity:connect", async () => {
-    console.info(`【Antigravity连接】打开官方页面：url=${ANTIGRAVITY_URL}`);
-    await shell.openExternal(ANTIGRAVITY_URL);
-    console.info("【Antigravity连接】官方页面已打开，刷新仪表板状态");
-
-    return buildDashboardState(store, getLaunchAtLoginPreference(), {
-      visibleProviders: getVisibleProviderIds(),
-    });
   });
 
   ipcMain.handle(
@@ -608,50 +529,16 @@ app.whenReady().then(() => {
       store.set("panelScale", normalizePanelScale(preferences.panelScale));
       store.set("panelOpacity", preferences.panelOpacity);
       store.set("panelTone", preferences.panelTone);
-      store.set("codexDataSource", preferences.codexDataSource);
-      store.set(
-        "codexProviderMultiplier",
-        normalizeCodexProviderMultiplier(preferences.codexProviderMultiplier),
-      );
-      store.set(
-        "codexDailyLimitUsd",
-        normalizeCodexUsdLimit(preferences.codexDailyLimitUsd),
-      );
-      store.set(
-        "codexWeeklyLimitUsd",
-        normalizeCodexUsdLimit(preferences.codexWeeklyLimitUsd),
-      );
-      store.set(
-        "codexMonthlyLimitUsd",
-        normalizeCodexUsdLimit(preferences.codexMonthlyLimitUsd),
-      );
-      store.set(
-        "codexShowRemainingUsage",
-        preferences.codexShowRemainingUsage,
-      );
-      store.set(
-        "claudeShowRemainingUsage",
-        preferences.claudeShowRemainingUsage,
-      );
-      store.set(
-        "antigravityShowRemainingUsage",
-        preferences.antigravityShowRemainingUsage,
-      );
       syncLaunchAtLoginPreference(
         app,
         preferences.launchAtLogin,
         launchAtLoginRuntime,
       );
       configureAutoRefresh();
-      console.info(
-        `【窗口布局】保存设置后同步窗口尺寸：preferredDisplayMode=${preferences.preferredDisplayMode}, panelScale=${preferences.panelScale}, preservePosition=true`,
-      );
       syncWindowLayouts();
 
       broadcastRefresh();
-      return buildDashboardState(store, getLaunchAtLoginPreference(), {
-        visibleProviders: getVisibleProviderIds(),
-      });
+      return buildDashboardState(store, getLaunchAtLoginPreference());
     },
   );
 

@@ -1,0 +1,38 @@
+[package]
+name = "quotagem"
+version = "2.0.0"
+description = "Lightweight tray monitor for Claude, Codex, and Antigravity usage quotas"
+authors = ["gyozalab"]
+license = ""
+repository = "https://github.com/gyozalab/QuotaGem"
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "quotagem_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-notification = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+anyhow = "1.0"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Windows-only：一次性清除 1.0（Electron）殘留的開機自啟登錄機碼（lib.rs setup）。
+# 版本對齊 tauri-plugin-autostart 已傳遞鎖定的 winreg 0.55，不新增重複版本。
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"

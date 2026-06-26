@@ -13,12 +13,13 @@ declare global {
       openExpandedPanel: () => Promise<void>;
       openCompactPanel: () => Promise<void>;
       closePanels: () => Promise<void>;
+      refreshUsage: () => Promise<void>;
       connectClaude: () => Promise<UsageDashboardState>;
-      connectAntigravity: () => Promise<UsageDashboardState>;
       saveSettings: (
         preferences: UsageDashboardState["preferences"],
       ) => Promise<UsageDashboardState>;
       onRefreshRequested: (callback: () => void) => () => void;
+      onSettingsRequested: (callback: () => void) => () => void;
     };
   }
 }

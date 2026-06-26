@@ -13,8 +13,6 @@ contextBridge.exposeInMainWorld("trayUsageWidget", {
   closePanels: () => ipcRenderer.invoke("window:closePanels") as Promise<void>,
   connectClaude: () =>
     ipcRenderer.invoke("claude:connect") as Promise<UsageDashboardState>,
-  connectAntigravity: () =>
-    ipcRenderer.invoke("antigravity:connect") as Promise<UsageDashboardState>,
   saveSettings: (preferences: UsageDashboardState["preferences"]) =>
     ipcRenderer.invoke("settings:save", preferences) as Promise<UsageDashboardState>,
   onRefreshRequested: (callback: () => void) => {

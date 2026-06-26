@@ -1,6 +1,9 @@
 import type { UsageDashboardState } from "../shared/dashboard";
 import { t } from "../shared/i18n";
-import type { NormalizedProviderUsage } from "../shared/usage";
+import type {
+  NormalizedProviderUsage,
+  NormalizedProviderUsageGroup,
+} from "../shared/usage";
 
 type UsageAlertLevel = "none" | "warning" | "danger";
 type UsageMetric = "session" | "weekly";
@@ -10,6 +13,13 @@ export interface UsageAlertNotification {
   title: string;
   body: string;
   level: Exclude<UsageAlertLevel, "none">;
+}
+
+// 一個告警範圍：可能是整個 provider（無群組），或某個模型群組（antigravity）。
+interface AlertScope {
+  session: NormalizedProviderUsageGroup["session"];
+  weekly: NormalizedProviderUsageGroup["weekly"];
+  groupLabel: string | null;
 }
 
 export function createUsageAlertTracker() {
@@ -24,28 +34,50 @@ export function createUsageAlertTracker() {
           continue;
         }
 
-        for (const metric of ["session", "weekly"] as const) {
-          const nextLevel = toAlertLevel(provider[metric].level);
-          const alertId = `${provider.provider}:${metric}`;
-          const previousLevel = seenLevels.get(alertId) ?? "none";
+        // group-aware：有群組就逐群組逐軌判定，否則沿用 provider 頂層兩軌。
+        const scopes: AlertScope[] =
+          provider.groups && provider.groups.length > 0
+            ? provider.groups.map((group) => ({
+                session: group.session,
+                weekly: group.weekly,
+                groupLabel: group.label,
+              }))
+            : [
+                {
+                  session: provider.session,
+                  weekly: provider.weekly,
+                  groupLabel: null,
+                },
+              ];
 
-          if (
-            state.preferences.notificationsEnabled &&
-            nextLevel !== "none" &&
-            shouldNotifyForLevel(state.preferences.notificationLevel, nextLevel) &&
-            getAlertRank(nextLevel) > getAlertRank(previousLevel)
-          ) {
-            alerts.push(
-              buildUsageAlertNotification(
-                state.preferences.language,
-                provider,
-                metric,
-                nextLevel,
-              ),
-            );
+        for (const scope of scopes) {
+          for (const metric of ["session", "weekly"] as const) {
+            const nextLevel = toAlertLevel(scope[metric].level);
+            const alertId = scope.groupLabel
+              ? `${provider.provider}:${scope.groupLabel}:${metric}`
+              : `${provider.provider}:${metric}`;
+            const previousLevel = seenLevels.get(alertId) ?? "none";
+
+            if (
+              state.preferences.notificationsEnabled &&
+              nextLevel !== "none" &&
+              shouldNotifyForLevel(state.preferences.notificationLevel, nextLevel) &&
+              getAlertRank(nextLevel) > getAlertRank(previousLevel)
+            ) {
+              alerts.push(
+                buildUsageAlertNotification(
+                  state.preferences.language,
+                  provider,
+                  scope,
+                  metric,
+                  alertId,
+                  nextLevel,
+                ),
+              );
+            }
+
+            seenLevels.set(alertId, nextLevel);
           }
-
-          seenLevels.set(alertId, nextLevel);
         }
       }
 
@@ -57,22 +89,28 @@ export function createUsageAlertTracker() {
 function buildUsageAlertNotification(
   language: UsageDashboardState["preferences"]["language"],
   provider: NormalizedProviderUsage,
+  scope: AlertScope,
   metric: UsageMetric,
+  alertId: string,
   level: Exclude<UsageAlertLevel, "none">,
 ): UsageAlertNotification {
   return {
-    id: `${provider.provider}:${metric}`,
+    id: alertId,
     title: t(language, "trayUsageWidget"),
     body: t(language, "usageAlertBody", {
-      provider: provider.displayName,
-      metric: provider[metric].label,
-      percent: Math.round(provider[metric].percent),
+      provider: scope.groupLabel
+        ? `${provider.displayName} · ${scope.groupLabel}`
+        : provider.displayName,
+      metric: scope[metric].label,
+      percent: Math.round(scope[metric].percent),
     }),
     level,
   };
 }
 
-function toAlertLevel(level: NormalizedProviderUsage["session"]["level"]): UsageAlertLevel {
+function toAlertLevel(
+  level: NormalizedProviderUsage["session"]["level"],
+): UsageAlertLevel {
   if (level === "danger") {
     return "danger";
   }

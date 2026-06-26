@@ -14,7 +14,6 @@ describe("panel themes", () => {
       "ocean",
       "mocha",
       "linen",
-      "minimal",
       "mist",
       "sand",
       "blossom",
@@ -27,7 +26,6 @@ describe("panel themes", () => {
     const forestTheme = getPanelThemeStyles("forest");
     const mochaTheme = getPanelThemeStyles("mocha");
     const linenTheme = getPanelThemeStyles("linen");
-    const minimalTheme = getPanelThemeStyles("minimal");
     const mistTheme = getPanelThemeStyles("mist");
     const sandTheme = getPanelThemeStyles("sand");
     const blossomTheme = getPanelThemeStyles("blossom");
@@ -46,14 +44,6 @@ describe("panel themes", () => {
     expect(linenTheme["--panel-color-scheme"]).toBe("light");
     expect(linenTheme["--panel-text-rgb"]).toBe("60, 46, 35");
     expect(linenTheme["--panel-button-text-rgb"]).toBe("60, 46, 35");
-    expect(minimalTheme["--panel-base-rgb"]).toBe("255, 255, 255");
-    expect(minimalTheme["--panel-card-rgb"]).toBe("254, 254, 254");
-    expect(minimalTheme["--panel-button-rgb"]).toBe("229, 229, 234");
-    expect(minimalTheme["--panel-primary-button-rgb"]).toBe("28, 28, 30");
-    expect(minimalTheme["--panel-primary-button-text-rgb"]).toBe("252, 250, 246");
-    expect(minimalTheme["--panel-checkbox-rgb"]).toBe("174, 174, 178");
-    expect(minimalTheme["--panel-tab-active-rgb"]).toBe("229, 229, 234");
-    expect(minimalTheme["--panel-card-alpha"]).toBe("0.96");
     expect(mistTheme["--panel-base-rgb"]).toBe("245, 244, 241");
     expect(mistTheme["--panel-text-rgb"]).toBe("80, 77, 74");
     expect(mistTheme["--panel-button-border-rgb"]).toBe("220, 215, 209");
@@ -64,5 +54,24 @@ describe("panel themes", () => {
     expect(blossomTheme["--panel-button-text-rgb"]).toBe("90, 73, 77");
     expect(blossomTheme["--panel-pill-rgb"]).toBe("150, 128, 133");
     expect(blossomTheme["--metric-danger-end"]).toBe("#dea0a7");
+  });
+
+  it("provides accessible ring and row colors for light themes and standard colors for dark themes", () => {
+    const charcoalTheme = getPanelThemeStyles("charcoal");
+    const linenTheme = getPanelThemeStyles("linen");
+
+    // Dark theme should use standard dark values
+    expect(charcoalTheme["--ring-normal"]).toBe("#3aa17e");
+    expect(charcoalTheme["--ring-warning"]).toBe("#e0a52e");
+    expect(charcoalTheme["--ring-danger"]).toBe("#e2574c");
+    expect(charcoalTheme["--row-normal"]).toBe("rgba(58, 161, 126, 0.28)");
+
+    // Light theme should use accessible light values (contrast enhanced)
+    expect(linenTheme["--ring-normal"]).toBe("#438564");
+    expect(linenTheme["--ring-warning"]).toBe("#a3792c");
+    expect(linenTheme["--ring-danger"]).toBe("#b85042");
+    expect(linenTheme["--row-normal"]).toBe("rgba(67, 133, 100, 0.16)");
+    expect(linenTheme["--row-warning"]).toBe("rgba(163, 121, 44, 0.16)");
+    expect(linenTheme["--row-danger"]).toBe("rgba(184, 80, 66, 0.16)");
   });
 });

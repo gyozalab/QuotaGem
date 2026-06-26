@@ -26,11 +26,19 @@ describe("renderer styles", () => {
     expect(css).toMatch(/\.panel-header__mark\s*\{[^}]*height:\s*18px;/s);
   });
 
-  it("stacks the expanded header meta under the title to keep spacing readable", () => {
+  it("renders provider usage as rings and keeps Antigravity identity colors", () => {
     const css = readFileSync(resolve(__dirname, "styles.css"), "utf8");
 
+    expect(css).toMatch(/--antigravity-gemini:\s*#6798d4;/i);
+    expect(css).toMatch(/--antigravity-others:\s*#[0-9a-f]{6};/i);
+    expect(css).toMatch(/--ring-danger:\s*#[0-9a-f]{6};/i);
     expect(css).toMatch(
-      /\.panel-header__identity\s*\{[^}]*display:\s*grid;[^}]*gap:\s*4px;/s,
+      /\.provider-icon--antigravity\s*\{[^}]*object-fit:\s*contain;/s,
+    );
+    expect(css).toMatch(/\.compact-widget__rings\s*\{[^}]*display:\s*flex;/s);
+    expect(css).toMatch(/\.compact-provider\s*\{[^}]*min-width:\s*0;/s);
+    expect(css).toMatch(
+      /\.compact-ring__fill--danger\s*\{[^}]*stroke:\s*var\(--ring-danger\);/s,
     );
   });
 });
