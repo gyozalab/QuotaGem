@@ -20,7 +20,7 @@ It helps you check:
 - Redesigns compact mode around usage rings, showing five-hour usage first and weekly usage in hover details and expanded mode.
 - Uses full-row progress bars in expanded mode, with Antigravity shown per model group.
 - Adds single-instance protection so reopening or autostart keeps only one QuotaGem process.
-- Uses the portable zip as the recommended Windows release artifact for now.
+- Ships as a portable build: download the zip, extract it, and run `quotagem.exe`.
 
 ## Preview
 
@@ -86,7 +86,7 @@ QuotaGem_2.0.0_x64-portable.zip
 
 Extract it and run `quotagem.exe`. To start QuotaGem with Windows, enable launch-at-login from the settings panel.
 
-For now, the portable zip is the recommended Windows artifact. MSI / NSIS installers may still be produced by the build, but they should wait for code signing and Microsoft Defender false-positive review before becoming the default download.
+For now, download the portable zip. Installer builds are not the recommended download yet.
 
 ## Development
 
@@ -113,7 +113,3 @@ The portable zip is written to:
 ```text
 src-tauri\target\release\bundle\portable\QuotaGem_2.0.0_x64-portable.zip
 ```
-
-## Screenshot Maintenance
-
-The README image list and capture states are documented in [README screenshot guide](./docs/screenshot-guide.md).

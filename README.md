@@ -20,7 +20,7 @@ QuotaGem 是一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windo
 - 精簡面板改成圓環設計，主顯五小時用量，每週用量放在提示與展開面板。
 - 展開面板使用整行進度條，Antigravity 會依模型群組分行顯示。
 - 加入 single-instance 保護，重複開啟或開機自啟時只保留一個 QuotaGem。
-- 建議以免安裝 portable zip 發布，安裝器先保留為建置產物。
+- 提供免安裝版本：下載 zip、解壓縮、執行 `quotagem.exe` 即可使用。
 
 ## 畫面預覽
 
@@ -86,7 +86,7 @@ QuotaGem_2.0.0_x64-portable.zip
 
 解壓縮後執行 `quotagem.exe`。若想讓 QuotaGem 跟著 Windows 啟動，可在設定面板開啟「開機自啟」。
 
-目前 Windows 發布建議以 portable zip 為主。MSI / NSIS 安裝器仍會產出，但等程式碼簽章與 Microsoft Defender 誤判處理穩定後，再升為預設下載。
+目前請優先下載 zip 免安裝版；安裝器版本暫時不作為主要下載。
 
 ## 開發
 
@@ -113,7 +113,3 @@ portable zip 會輸出到：
 ```text
 src-tauri\target\release\bundle\portable\QuotaGem_2.0.0_x64-portable.zip
 ```
-
-## 截圖維護
-
-README 使用的圖片清單與重截狀態記錄在 [README 截圖更新指南](./docs/screenshot-guide.md)。
