@@ -1,4 +1,5 @@
 pub mod alerts;
+pub mod diag;
 pub mod models;
 pub mod provider;
 pub mod providers;
@@ -55,7 +56,7 @@ async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateRe
   let prefs = store.to_preferences();
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
-  let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  let snapshots = providers::get_visible_snapshots(claude_key, claude_org, prefs.provider_visibility.clone()).await;
   alerts::process_alerts(&app, &snapshots, &prefs);
   Ok(models::UsageStateResponse {
     snapshots,
@@ -68,6 +69,14 @@ async fn save_settings(
   app: tauri::AppHandle,
   preferences: models::WidgetPreferences,
 ) -> Result<models::UsageStateResponse, String> {
+  // 診斷儀器（暫時）：以前 save_settings 完全不寫 log，切供應商的後端路徑是盲區。
+  crate::diag::log_line(&format!(
+    "save_settings:enter visibility=(claude={},codex={},antigravity={}) mode={}",
+    preferences.provider_visibility.claude,
+    preferences.provider_visibility.codex,
+    preferences.provider_visibility.antigravity,
+    preferences.preferred_display_mode
+  ));
   let mut store = models::load_settings();
   store.preferred_display_mode = Some(preferences.preferred_display_mode);
   store.launch_at_login = Some(preferences.launch_at_login);
@@ -94,9 +103,12 @@ async fn save_settings(
     let _ = autostart.disable();
   }
 
+  // 套用新幾何到目前 visible 的面板（同時補強 always_on_top 守住 z-order）。
+  // **不**呼叫 show_expanded_panel：settings 是同視窗的 modal，使用者關閉它時面板
+  // 本來就還在；後端再 show 反而觸發 Win32 前景鎖（SetForegroundWindow 在 tray
+  // 之外的非互動路徑會被靜默拒絕），污染 toggle 邏輯的可見性判斷。
   let _ = windows::update_window_geometries(&app, &store);
 
-  // 語言可能改變 → 即時重建托盤選單語言（對齊 1.0 save 時更新托盤）
   tray::update_tray_language(
     &app,
     &store.language.clone().unwrap_or_else(|| "en".to_string()),
@@ -104,7 +116,8 @@ async fn save_settings(
 
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
-  let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  let snapshots = providers::get_visible_snapshots(claude_key, claude_org, preferences.provider_visibility).await;
+  crate::diag::log_line(&format!("save_settings:exit snapshots={}", snapshots.len()));
 
   Ok(models::UsageStateResponse {
     snapshots,
@@ -113,7 +126,10 @@ async fn save_settings(
 }
 
 #[tauri::command]
-async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
+async fn connect_claude(
+  app: tauri::AppHandle,
+  preferences: models::WidgetPreferences,
+) -> Result<models::UsageStateResponse, String> {
   let _login_window = tauri::WebviewWindowBuilder::new(
     &app,
     "claude_login",
@@ -156,14 +172,48 @@ async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateRespo
   let mut store = models::load_settings();
   store.claude_session_key = Some(key);
   store.claude_organization_id = Some(org_id);
+  store.preferred_display_mode = Some(preferences.preferred_display_mode);
+  store.launch_at_login = Some(preferences.launch_at_login);
+  store.provider_visibility = Some(serde_json::to_value(&preferences.provider_visibility).map_err(|e| e.to_string())?);
+  store.refresh_interval_minutes = Some(preferences.refresh_interval_minutes);
+  store.warning_threshold = Some(preferences.warning_threshold);
+  store.danger_threshold = Some(preferences.danger_threshold);
+  store.notifications_enabled = Some(preferences.notifications_enabled);
+  store.notification_level = Some(preferences.notification_level);
+  store.language = Some(preferences.language);
+  store.time_display = Some(preferences.time_display);
+  store.time_format = Some(preferences.time_format);
+  store.date_format = Some(preferences.date_format);
+  store.panel_scale = Some(preferences.panel_scale);
+  store.panel_opacity = Some(preferences.panel_opacity);
+  store.panel_tone = Some(preferences.panel_tone);
 
   models::save_settings(&store).map_err(|e| e.to_string())?;
 
-  let snapshots = providers::get_all_snapshots(store.claude_session_key.clone(), store.claude_organization_id.clone()).await;
+  let autostart = app.autolaunch();
+  if store.launch_at_login.unwrap_or(false) {
+    let _ = autostart.enable();
+  } else {
+    let _ = autostart.disable();
+  }
+
+  let _ = windows::update_window_geometries(&app, &store);
+  let _ = windows::show_expanded_panel(&app);
+  tray::update_tray_language(
+    &app,
+    &store.language.clone().unwrap_or_else(|| "en".to_string()),
+  );
+
+  let prefs = store.to_preferences();
+  let snapshots = providers::get_visible_snapshots(
+    store.claude_session_key.clone(),
+    store.claude_organization_id.clone(),
+    prefs.provider_visibility.clone(),
+  ).await;
 
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: with_real_autostart(&app, store.to_preferences()),
+    preferences: with_real_autostart(&app, prefs),
   })
 }
 
@@ -198,18 +248,45 @@ async fn sync_expanded_layout(
     .map_err(|error| error.to_string())
 }
 
+/// 測試用：直接呼叫 update_window_geometries 模擬 save_settings 末段的副作用。
+/// 在 release build 也可用，給 QA 驗證 「儲存設定後 z-order 重綁」是否生效。
+#[tauri::command]
+async fn _test_simulate_save(app: tauri::AppHandle) -> Result<(), String> {
+  let store = models::load_settings();
+  windows::update_window_geometries(&app, &store).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 async fn refresh_usage(app: tauri::AppHandle) -> Result<(), String> {
   windows::broadcast_refresh(&app).map_err(|error| error.to_string())
 }
 
+/// 診斷儀器（暫時）：前端把未捕捉的 React/JS 例外回寫到 debug.log。
+/// 透明視窗在 render 崩潰時整片空白，過去無法觀測；這條把它變成明文。
+#[tauri::command]
+fn log_frontend_error(message: String) {
+  crate::diag::log_line(&format!("FRONTEND_ERROR {}", message));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+    .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+      // 再次啟動 quotagem.exe 等效於 tray click（toggle）；--simulate-save 旗標
+      // 改為觸發 update_window_geometries (模擬 save_settings 末段的 z-order 重綁)。
+      if args.iter().any(|a| a == "--simulate-save") {
+        crate::diag::log_line("single_instance:--simulate-save -> update_window_geometries");
+        let store = models::load_settings();
+        let _ = windows::update_window_geometries(app, &store);
+      } else {
+        crate::diag::log_line("single_instance:second-launch -> toggle");
+        let _ = windows::toggle_preferred_panel(app);
+      }
+    }))
     .plugin(tauri_plugin_autostart::Builder::default().build())
     .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())
+    .manage(windows::PanelTimings::default())
     .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
@@ -219,7 +296,9 @@ pub fn run() {
       open_expanded_panel,
       close_panels,
       sync_expanded_layout,
-      refresh_usage
+      refresh_usage,
+      _test_simulate_save,
+      log_frontend_error
     ])
     .on_window_event(|window, event| {
       if matches!(window.label(), "main" | "compact") {
@@ -230,6 +309,7 @@ pub fn run() {
       }
     })
     .setup(|app| {
+      crate::diag::log_line("=== app setup started ===");
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

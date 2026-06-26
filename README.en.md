@@ -2,12 +2,12 @@
 
 [繁體中文](./README.md) | English
 
-QuotaGem is a Windows tray utility for keeping `Claude`, `Codex`, and `Antigravity` usage visible at a glance.
+A Windows tray app for keeping `Claude`, `Codex`, and `Antigravity` usage visible without living in browser tabs.
 
 It helps you check:
 
 - current usage
-- five-hour and weekly quota status
+- five-hour (session) and weekly status
 - reset times
 - warning and danger thresholds
 
@@ -15,20 +15,21 @@ It helps you check:
 
 ## What's New in 2.0
 
-- Rewritten on Tauri 2, with Rust handling the tray shell, windows, providers, notifications, and launch-at-login.
-- Adds `Antigravity` as a provider, split into `Gemini` and `Claude and GPT` quota groups.
-- Redesigns compact mode around usage rings, showing five-hour usage first and weekly usage in hover details and expanded mode.
-- Uses full-row progress bars in expanded mode, with Antigravity shown per model group.
-- Adds single-instance protection so reopening or autostart keeps only one QuotaGem process.
-- Ships as a portable build: download the zip, extract it, and run `quotagem.exe`.
+- 🆕 Added `Antigravity` as a third provider, auto-split into `Gemini` and `Claude and GPT` tracks
+- 🔄 Compact panel redesigned as rings, surfacing five-hour usage (weekly on hover)
+- 🛡️ Single-instance protection: reopening or autostart never spawns a second window
+- 📦 Rewritten on Tauri 2 with a portable build, smaller and lighter on memory
+- 🚀 Launch-at-login tracks the current `quotagem.exe` path, so moving the portable app only requires running it once from the new location
 
-## Preview
+## Screenshots
 
-### Compact Panel
+> When refreshing README images, follow the filename and capture-state checklist in [README screenshot guide](./docs/screenshot-guide.md).
+
+### Compact panel
 
 <img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
 
-### Claude-only or Codex-only View
+### Single-provider view
 
 <p>
   <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
@@ -49,7 +50,18 @@ It helps you check:
 
 ## Data Sources
 
-### Claude
+- A calm tray-first experience
+- `expanded` and `compact` panels
+- Unified view for `Claude`, `Codex`, and `Antigravity`
+- `Antigravity` is split into `Gemini` and `Claude and GPT` usage groups
+- Show only the providers you care about
+- The compact panel surfaces your five-hour usage, with weekly on hover
+- Custom warning and danger thresholds
+- Background notifications
+- Theme, transparency, and scale controls
+- Launch at login, waking up with Windows
+- English and Traditional Chinese UI
+- Built-in `Connect Claude` flow
 
 QuotaGem uses the built-in `Connect Claude` flow to store the required session information, then reads Claude usage from the backend directly. Version 2.0 no longer depends on a hidden browser window.
 
@@ -76,9 +88,13 @@ QuotaGem detects the signed-in local Antigravity language server and calls a rea
 - Traditional Chinese and English UI languages.
 - Launch-at-login support. For portable builds, running the moved exe once refreshes the startup path.
 
+Under the hood it is built on Tauri (Rust + the system WebView2), so the installer is a few MB and it sips memory while sitting in your tray all day.
+
 ## Download
 
-Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest portable package:
+Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest portable package (`QuotaGem_*_x64-portable.zip`). Extract it, run `quotagem.exe`, and enable launch-at-login from the settings panel if you want QuotaGem to start with Windows.
+
+The portable build is the recommended Windows artifact until the installer is code-signed and its Microsoft Defender reputation is settled. Launch-at-login points to the current `quotagem.exe` path; if you move the app, run it once from the new location to refresh the Windows startup entry.
 
 ```text
 QuotaGem_2.0.0_x64-portable.zip
@@ -92,24 +108,17 @@ For now, download the portable zip. Installer builds are not the recommended dow
 
 QuotaGem 2.0 is built with Tauri 2, Rust, React, and TypeScript.
 
+Built with Tauri 2 (Rust + React). You need the Rust toolchain and Node.js installed.
+
 ```powershell
 git clone https://github.com/gyozalab/QuotaGem.git
 cd QuotaGem
 npm install
-npm run dev
-```
-
-## Build
-
-```powershell
-npm test
-npm run build
-npm run tauri:build
+npx tauri dev      # development
+npx tauri build    # build the app and Windows bundles
 npm run package:portable
 ```
 
-The portable zip is written to:
+## Status
 
-```text
-src-tauri\target\release\bundle\portable\QuotaGem_2.0.0_x64-portable.zip
-```
+The Tauri 2.0 rewrite is feature-complete: all three providers, both panels, settings, alerts, themes, i18n, launch-at-login, and single-instance startup protection are in place. Portable zip is the recommended release artifact for now; MSI/NSIS installers are built but should wait for signing and Defender false-positive review before being promoted as the default download.

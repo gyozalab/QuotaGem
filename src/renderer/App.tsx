@@ -67,7 +67,7 @@ function App() {
       dangerThreshold: 90,
       notificationsEnabled: true,
       notificationLevel: "all",
-      language: "en",
+      language: "zh-TW",
       timeDisplay: "utc",
       timeFormat: "24h",
       dateFormat: "iso",
@@ -245,7 +245,7 @@ function App() {
                   setSettingsNotice("");
                   setConnectingClaude(true);
                   void window.trayUsageWidget
-                      .connectClaude()
+                    .connectClaude(draftPreferences)
                       .then((nextState) => {
                       setSettingsNotice(t(language, "claudeConnectedSuccessfully"));
                       setDashboardState(nextState);

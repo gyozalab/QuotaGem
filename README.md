@@ -2,33 +2,34 @@
 
 繁體中文 | [English](./README.en.md)
 
-QuotaGem 是一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windows 系統匣小工具。
+一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windows 系統匣小工具。
 
-它讓你不用一直開網頁或切換分頁，就能在桌面角落快速看到：
+它讓你不用一直打開網頁或切換分頁，就能在桌面上快速看到：
 
 - 目前用量
-- 五小時與每週額度狀態
+- 五小時（Session）與每週（Weekly）狀態
 - 重設時間
 - 警告與危險門檻
 
 <img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
 
-## 2.0 重點
+## 2.0 有什麼新的
 
-- 改用 Tauri 2 重寫，以 Rust 負責系統匣、視窗、取數、通知與開機自啟。
-- 新增 `Antigravity` provider，並拆成 `Gemini` 與 `Claude and GPT` 兩組額度。
-- 精簡面板改成圓環設計，主顯五小時用量，每週用量放在提示與展開面板。
-- 展開面板使用整行進度條，Antigravity 會依模型群組分行顯示。
-- 加入 single-instance 保護，重複開啟或開機自啟時只保留一個 QuotaGem。
-- 提供免安裝版本：下載 zip、解壓縮、執行 `quotagem.exe` 即可使用。
+- 🆕 新增 `Antigravity` 第三 provider，自動拆成 `Gemini` 與 `Claude and GPT` 兩軌
+- 🔄 精簡面板改成圓環設計，主顯五小時額度，每週用量收進 hover
+- 🛡️ 單一實例保護，重複開啟或開機自啟都只會有一個視窗
+- 📦 改用 Tauri 2 重寫，提供免安裝版，體積更小、更省記憶體
+- 🚀 開機自啟會跟著目前執行的 `quotagem.exe` 路徑更新，搬動免安裝版後再開一次即可
 
 ## 畫面預覽
+
+> README 圖片需要重截時，請照 [README 截圖更新指南](./docs/screenshot-guide.md) 的檔名與畫面狀態替換。
 
 ### 精簡面板
 
 <img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="66%" />
 
-### 單獨顯示 Claude 或 Codex
+### 單獨顯示某個服務
 
 <p>
   <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="49%" />
@@ -49,7 +50,18 @@ QuotaGem 是一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windo
 
 ## 支援的用量來源
 
-### Claude
+- 系統匣常駐，打開就看
+- `expanded` 與 `compact` 兩種面板
+- 同時查看 `Claude`、`Codex` 與 `Antigravity`
+- `Antigravity` 會分開顯示 `Gemini` 與 `Claude and GPT` 用量
+- 也可以自由選擇只顯示其中一兩個
+- 精簡面板直接顯示五小時額度，每週用量收在 hover 提示裡
+- 自訂警告與危險門檻
+- 背景通知提醒
+- 可調整主題、透明度與縮放
+- 開機自啟，跟著 Windows 一起醒來
+- 繁體中文與英文介面切換
+- 內建 `Connect Claude` 流程
 
 透過內建 `Connect Claude` 流程取得必要 session 資訊，並用後端直接讀取 Claude 用量狀態。2.0 不再依賴隱藏瀏覽器視窗。
 
@@ -76,9 +88,17 @@ QuotaGem 是一個為 `Claude`、`Codex` 與 `Antigravity` 用量而生的 Windo
 - 繁體中文與英文介面。
 - 開機自啟，portable exe 搬動後重新執行即可更新啟動路徑。
 
+底層用 Tauri（Rust + 系統內建 WebView2）打造，安裝檔個位數 MB、記憶體佔用低，常駐一整天也很安靜。
+
 ## 下載使用
 
-前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的免安裝版：
+前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的免安裝版（`QuotaGem_*_x64-portable.zip`）。解壓縮後執行 `quotagem.exe`，需要跟著 Windows 啟動時，再到設定面板開啟開機自啟。
+
+目前 Windows 發佈建議以免安裝版為主；安裝器會等程式碼簽章與 Microsoft Defender 誤判申訴穩定後再作為預設下載。開機自啟會指向目前執行的 `quotagem.exe` 路徑；如果你搬動 exe，從新位置執行一次即可更新 Windows 開機啟動項。
+
+## 目前狀態
+
+QuotaGem 2.0 的 Tauri 重寫已完成主要功能：三個 provider、展開與精簡面板、設定、告警、主題、語系、開機自啟、單一實例保護與免安裝版打包流程都已就緒。現階段建議優先發布 portable zip；MSI / NSIS 安裝器先保留為建置產物，等簽章與 Defender 誤判處理穩定後再升為預設下載。
 
 ```text
 QuotaGem_2.0.0_x64-portable.zip
@@ -92,11 +112,15 @@ QuotaGem_2.0.0_x64-portable.zip
 
 QuotaGem 2.0 使用 Tauri 2、Rust、React 與 TypeScript。
 
+以 Tauri 2（Rust + React）開發，需先安裝 Rust 工具鏈與 Node.js。
+
 ```powershell
 git clone https://github.com/gyozalab/QuotaGem.git
 cd QuotaGem
 npm install
-npm run dev
+npx tauri dev      # 開發模式
+npx tauri build    # 建置 app 與 Windows bundle
+npm run package:portable
 ```
 
 ## 建置

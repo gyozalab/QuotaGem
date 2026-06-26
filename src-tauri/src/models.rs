@@ -104,7 +104,7 @@ impl Default for AppStore {
             danger_threshold: Some(90),
             notifications_enabled: Some(true),
             notification_level: Some("all".to_string()),
-            language: Some("en".to_string()),
+            language: Some("zh-TW".to_string()),
             time_display: Some("utc".to_string()),
             time_format: Some("24h".to_string()),
             date_format: Some("iso".to_string()),

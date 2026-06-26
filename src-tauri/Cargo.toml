@@ -36,3 +36,13 @@ chrono = { version = "0.4", features = ["serde"] }
 # 版本對齊 tauri-plugin-autostart 已傳遞鎖定的 winreg 0.55，不新增重複版本。
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
+# windows-sys：直接打 Win32 API 取代不可靠的 Tauri 抽象（SetWindowPos / BringWindowToTop /
+# IsWindowVisible / GetForegroundWindow 等），供 windows.rs 強制重綁 topmost 以及 diag.rs
+# 取得真實視窗狀態。版本與 features 對齊 tauri 傳遞已鎖定的 0.59 (HWND = *mut c_void)，
+# 不新增重複版本。Tauri 的 WebviewWindow::hwnd() 回傳 windows::Win32::Foundation::HWND
+# (newtype 包 *mut c_void)，呼叫端用 .0 抽出原始指標再 cast 成 windows_sys::HWND。
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+] }
