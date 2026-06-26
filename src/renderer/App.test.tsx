@@ -209,6 +209,29 @@ describe("App", () => {
       });
   });
 
+  it("preserves provider visibility draft when connecting Claude", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    await userEvent.click(await screen.findByLabelText("Antigravity"));
+    await userEvent.click(screen.getByRole("button", { name: "Connect Claude" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.connectClaude).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerVisibility: {
+            claude: true,
+            codex: true,
+            antigravity: false,
+          },
+        }),
+      );
+    });
+  });
+
   it("lets people choose a date format from settings", async () => {
     render(<App />);
 

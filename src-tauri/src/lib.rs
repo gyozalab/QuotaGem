@@ -55,7 +55,7 @@ async fn fetch_usage_state(app: tauri::AppHandle) -> Result<models::UsageStateRe
   let prefs = store.to_preferences();
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
-  let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  let snapshots = providers::get_visible_snapshots(claude_key, claude_org, prefs.provider_visibility.clone()).await;
   alerts::process_alerts(&app, &snapshots, &prefs);
   Ok(models::UsageStateResponse {
     snapshots,
@@ -104,7 +104,7 @@ async fn save_settings(
 
   let claude_key = store.claude_session_key.clone();
   let claude_org = store.claude_organization_id.clone();
-  let snapshots = providers::get_all_snapshots(claude_key, claude_org).await;
+  let snapshots = providers::get_visible_snapshots(claude_key, claude_org, preferences.provider_visibility).await;
 
   Ok(models::UsageStateResponse {
     snapshots,
@@ -113,7 +113,10 @@ async fn save_settings(
 }
 
 #[tauri::command]
-async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateResponse, String> {
+async fn connect_claude(
+  app: tauri::AppHandle,
+  preferences: models::WidgetPreferences,
+) -> Result<models::UsageStateResponse, String> {
   let _login_window = tauri::WebviewWindowBuilder::new(
     &app,
     "claude_login",
@@ -156,14 +159,47 @@ async fn connect_claude(app: tauri::AppHandle) -> Result<models::UsageStateRespo
   let mut store = models::load_settings();
   store.claude_session_key = Some(key);
   store.claude_organization_id = Some(org_id);
+  store.preferred_display_mode = Some(preferences.preferred_display_mode);
+  store.launch_at_login = Some(preferences.launch_at_login);
+  store.provider_visibility = Some(serde_json::to_value(&preferences.provider_visibility).map_err(|e| e.to_string())?);
+  store.refresh_interval_minutes = Some(preferences.refresh_interval_minutes);
+  store.warning_threshold = Some(preferences.warning_threshold);
+  store.danger_threshold = Some(preferences.danger_threshold);
+  store.notifications_enabled = Some(preferences.notifications_enabled);
+  store.notification_level = Some(preferences.notification_level);
+  store.language = Some(preferences.language);
+  store.time_display = Some(preferences.time_display);
+  store.time_format = Some(preferences.time_format);
+  store.date_format = Some(preferences.date_format);
+  store.panel_scale = Some(preferences.panel_scale);
+  store.panel_opacity = Some(preferences.panel_opacity);
+  store.panel_tone = Some(preferences.panel_tone);
 
   models::save_settings(&store).map_err(|e| e.to_string())?;
 
-  let snapshots = providers::get_all_snapshots(store.claude_session_key.clone(), store.claude_organization_id.clone()).await;
+  let autostart = app.autolaunch();
+  if store.launch_at_login.unwrap_or(false) {
+    let _ = autostart.enable();
+  } else {
+    let _ = autostart.disable();
+  }
+
+  let _ = windows::update_window_geometries(&app, &store);
+  tray::update_tray_language(
+    &app,
+    &store.language.clone().unwrap_or_else(|| "en".to_string()),
+  );
+
+  let prefs = store.to_preferences();
+  let snapshots = providers::get_visible_snapshots(
+    store.claude_session_key.clone(),
+    store.claude_organization_id.clone(),
+    prefs.provider_visibility.clone(),
+  ).await;
 
   Ok(models::UsageStateResponse {
     snapshots,
-    preferences: with_real_autostart(&app, store.to_preferences()),
+    preferences: with_real_autostart(&app, prefs),
   })
 }
 

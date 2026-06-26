@@ -121,8 +121,10 @@ const ipcAdapter = {
   refreshUsage: async (): Promise<void> => {
     return invoke<void>("refresh_usage");
   },
-  connectClaude: async (): Promise<UsageDashboardState> => {
-    return invoke<UsageDashboardState>("connect_claude");
+  connectClaude: async (
+    preferences: UsageDashboardState["preferences"],
+  ): Promise<UsageDashboardState> => {
+    return invoke<UsageDashboardState>("connect_claude", { preferences });
   },
   saveSettings: async (
     preferences: UsageDashboardState["preferences"],
