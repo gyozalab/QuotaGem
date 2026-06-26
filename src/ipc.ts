@@ -75,33 +75,41 @@ function buildLastUpdatedLabel(
   });
 }
 
-const ipcAdapter = {
-  fetchUsageState: async (): Promise<UsageDashboardState> => {
-    const raw = await invoke<RawUsageResponse>("fetch_usage_state");
-
-    const providers = raw.snapshots.map((snapshot) =>
-      normalizeProviderUsage(snapshot, {
-        language: raw.preferences.language,
-        timeDisplay: raw.preferences.timeDisplay,
-        timeFormat: raw.preferences.timeFormat,
-        dateFormat: raw.preferences.dateFormat,
-        warningThreshold: raw.preferences.warningThreshold,
-        dangerThreshold: raw.preferences.dangerThreshold,
-      }),
-    );
-
-    const lastUpdatedLabel = buildLastUpdatedLabel(raw.snapshots, {
+// 把後端 { snapshots, preferences } 正規化成前端 UsageDashboardState。
+// 根因修復：原本只有 fetchUsageState 做正規化，saveSettings / connectClaude
+// 直接把後端原始回應（含 snapshots、無 providers）當成 UsageDashboardState 回傳，
+// 導致 setDashboardState 後 providers=undefined，下一次 render 的
+// filterProvidersByVisibility 對 undefined.filter() 丟 TypeError → 透明視窗整片空白
+// （使用者看到的「切供應商後 app 跳掉」）。三個入口統一走此函式。
+function toDashboardState(raw: RawUsageResponse): UsageDashboardState {
+  const providers = raw.snapshots.map((snapshot) =>
+    normalizeProviderUsage(snapshot, {
       language: raw.preferences.language,
       timeDisplay: raw.preferences.timeDisplay,
       timeFormat: raw.preferences.timeFormat,
       dateFormat: raw.preferences.dateFormat,
-    });
+      warningThreshold: raw.preferences.warningThreshold,
+      dangerThreshold: raw.preferences.dangerThreshold,
+    }),
+  );
 
-    return {
-      providers,
-      lastUpdatedLabel,
-      preferences: raw.preferences,
-    };
+  const lastUpdatedLabel = buildLastUpdatedLabel(raw.snapshots, {
+    language: raw.preferences.language,
+    timeDisplay: raw.preferences.timeDisplay,
+    timeFormat: raw.preferences.timeFormat,
+    dateFormat: raw.preferences.dateFormat,
+  });
+
+  return {
+    providers,
+    lastUpdatedLabel,
+    preferences: raw.preferences,
+  };
+}
+
+const ipcAdapter = {
+  fetchUsageState: async (): Promise<UsageDashboardState> => {
+    return toDashboardState(await invoke<RawUsageResponse>("fetch_usage_state"));
   },
   syncExpandedLayout: async (layout: {
     contentHeight: number;
@@ -124,12 +132,16 @@ const ipcAdapter = {
   connectClaude: async (
     preferences: UsageDashboardState["preferences"],
   ): Promise<UsageDashboardState> => {
-    return invoke<UsageDashboardState>("connect_claude", { preferences });
+    return toDashboardState(
+      await invoke<RawUsageResponse>("connect_claude", { preferences }),
+    );
   },
   saveSettings: async (
     preferences: UsageDashboardState["preferences"],
   ): Promise<UsageDashboardState> => {
-    return invoke<UsageDashboardState>("save_settings", { preferences });
+    return toDashboardState(
+      await invoke<RawUsageResponse>("save_settings", { preferences }),
+    );
   },
   onRefreshRequested: (callback: () => void) => {
     let unlistenFn: (() => void) | null = null;

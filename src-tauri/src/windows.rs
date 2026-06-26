@@ -1,16 +1,26 @@
 use crate::models::{coerce_provider_visibility, load_settings, AppStore};
-use std::sync::atomic::{AtomicBool, Ordering};
+use crate::diag;
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     App, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
 
-pub struct PanelDismissed(AtomicBool);
+/// 托盤雙擊去抖閾值（ms）。低於此值的連續 tray click 直接吞掉。
+const TRAY_DEBOUNCE_MS: i64 = 350;
 
-impl Default for PanelDismissed {
-    fn default() -> Self {
-        Self(AtomicBool::new(true))
-    }
+#[derive(Debug, Default)]
+pub struct PanelTimings {
+    last_toggle_at: AtomicI64,
+    last_shown_at: AtomicI64,
+}
+
+fn now_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 const COMPACT_WINDOW_LABEL: &str = "compact";
@@ -241,7 +251,9 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
     .shadow(false)
     .build()?;
 
-    position_compact_window(&compact, &settings)
+    position_compact_window(&compact, &settings)?;
+    diag::log_line("windows::setup complete (windows created hidden)");
+    Ok(())
 }
 
 pub fn show_compact_panel(app: &AppHandle) -> tauri::Result<()> {
@@ -250,14 +262,35 @@ pub fn show_compact_panel(app: &AppHandle) -> tauri::Result<()> {
         .get_webview_window(COMPACT_WINDOW_LABEL)
         .ok_or_else(|| tauri::Error::WebviewNotFound)?;
 
-    position_compact_window(&compact, &settings)?;
-    if let Some(expanded) = app.get_webview_window(EXPANDED_WINDOW_LABEL) {
-        expanded.hide()?;
+    diag::log_line("show_compact_panel:enter");
+    #[cfg(windows)]
+    if let Ok(hwnd) = compact.hwnd() {
+        diag::snapshot("show_compact_panel:before-hide-expanded", hwnd.0 as isize);
     }
+
+    if let Some(expanded) = app.get_webview_window(EXPANDED_WINDOW_LABEL) {
+        let _ = expanded.hide();
+    }
+    // position → show → diag::force_topmost 強制重綁 topmost。
+    // 不再用 Tauri set_always_on_top(true)——專家診斷：Tauri 走的 SetWindowPos
+    // 在 transparent+layered 視窗上仍可能被 hide()->show() 循環清掉 HWND_TOPMOST，
+    // 或被沒帶 SWP_NOZORDER 的 set_size/set_position 降級為 HWND_TOP。
+    // force_topmost 直接打 Win32：SetWindowPos(HWND_TOPMOST, SWP_NOMOVE|SWP_NOSIZE|
+    // SWP_NOACTIVATE) + BringWindowToTop，繞過所有抽象不可靠面。
+    position_compact_window(&compact, &settings)?;
     compact.show()?;
-    compact.set_focus()?;
+    #[cfg(windows)]
+    {
+        if let Ok(hwnd) = compact.hwnd() {
+            diag::snapshot("show_compact_panel:after-show", hwnd.0 as isize);
+            diag::force_topmost(hwnd.0 as isize);
+            diag::snapshot("show_compact_panel:after-force-topmost", hwnd.0 as isize);
+        }
+    }
     compact.emit("usage:refreshRequested", ())?;
-    app.state::<PanelDismissed>().0.store(false, Ordering::Relaxed);
+    app.state::<PanelTimings>()
+        .last_shown_at
+        .store(now_ms(), Ordering::Relaxed);
     Ok(())
 }
 
@@ -295,48 +328,98 @@ fn position_expanded_window(
 
 pub fn show_expanded_panel(app: &AppHandle) -> tauri::Result<()> {
     if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {
-        compact.hide()?;
+        let _ = compact.hide();
     }
     let expanded = app
         .get_webview_window(EXPANDED_WINDOW_LABEL)
         .ok_or_else(|| tauri::Error::WebviewNotFound)?;
 
     let settings = load_settings();
-    let input = *app
-        .state::<ExpandedWindowState>()
-        .inner
-        .lock()
-        .expect("expanded window state poisoned");
+    let input = match app.state::<ExpandedWindowState>().inner.lock() {
+        Ok(guard) => *guard,
+        Err(poisoned) => {
+            // Mutex 在過去某次 panic 中毒。降級取 inner，並校驗 content_height 合法性；
+            // 不合法則 reset 成預設值（content_height=0 → expanded_window_height 退回最大值）。
+            let inner = *poisoned.into_inner();
+            if !inner.content_height.is_finite() || inner.content_height < 0.0 {
+                ExpandedLayoutInput {
+                    content_height: 0.0,
+                    settings_open: false,
+                }
+            } else {
+                inner
+            }
+        }
+    };
+    // position → show → diag::force_topmost 強制重綁 topmost。
+    // 詳細理由見 show_compact_panel 同段註解。
+    diag::log_line("show_expanded_panel:enter");
+    #[cfg(windows)]
+    if let Ok(hwnd) = expanded.hwnd() {
+        diag::snapshot("show_expanded_panel:before-position", hwnd.0 as isize);
+    }
     position_expanded_window(&expanded, &settings, input)?;
-
     expanded.show()?;
-    expanded.set_focus()?;
+    #[cfg(windows)]
+    {
+        if let Ok(hwnd) = expanded.hwnd() {
+            diag::snapshot("show_expanded_panel:after-show", hwnd.0 as isize);
+            diag::force_topmost(hwnd.0 as isize);
+            diag::snapshot("show_expanded_panel:after-force-topmost", hwnd.0 as isize);
+        }
+    }
     expanded.emit("usage:refreshRequested", ())?;
-    app.state::<PanelDismissed>().0.store(false, Ordering::Relaxed);
+    app.state::<PanelTimings>()
+        .last_shown_at
+        .store(now_ms(), Ordering::Relaxed);
     Ok(())
 }
 
 /// renderer 量到內容高度後回報，重算 expanded 視窗高度並重新定位。
+///
+/// 守門：(1) content_height 不合法（< 100、NaN、Inf）→ 拒絕寫入 state 也不動幾何，
+/// 避免 settings sheet 卸載瞬間的污染值把後續 show 拉到 1px 高的縫。
+/// (2) expanded 視窗 hidden 時 → 寫 state 但不動幾何，避免 layered window
+/// 在 hidden 狀態下被 SetWindowPos 觸發 z-order 賬期混亂。
 pub fn sync_expanded_layout(
     app: &AppHandle,
     content_height: f64,
     settings_open: bool,
 ) -> tauri::Result<()> {
+    // settings_open=true 時 content_height 來自 ref，可能任何值（500px 是常數高度），
+    // 不做 sanity check；只在 settings_open=false 時擋小值。
+    if !settings_open && (!content_height.is_finite() || content_height < 100.0) {
+        return Ok(());
+    }
     let input = ExpandedLayoutInput {
         content_height,
         settings_open,
     };
     {
         let state = app.state::<ExpandedWindowState>();
-        let mut guard = state.inner.lock().expect("expanded window state poisoned");
-        *guard = input;
+        let lock_result = state.inner.lock();
+        match lock_result {
+            Ok(mut guard) => *guard = input,
+            Err(poisoned) => *poisoned.into_inner() = input,
+        };
     }
 
     let expanded = app
         .get_webview_window(EXPANDED_WINDOW_LABEL)
         .ok_or_else(|| tauri::Error::WebviewNotFound)?;
+    if !expanded.is_visible().unwrap_or(false) {
+        return Ok(());
+    }
     let settings = load_settings();
-    position_expanded_window(&expanded, &settings, input)
+    position_expanded_window(&expanded, &settings, input)?;
+    #[cfg(windows)]
+    if let Ok(hwnd) = expanded.hwnd() {
+        // sync_expanded_layout 在 settings sheet 關閉後也會跑（content_height 變化）；
+        // 不重綁 topmost，set_size/set_position 又把 z-order 推下去。
+        diag::snapshot("sync_expanded_layout:after-position", hwnd.0 as isize);
+        diag::force_topmost(hwnd.0 as isize);
+    }
+    Ok(())
 }
 
 /// 對目前可見的面板廣播刷新請求（隱藏的視窗不打擾），移植自 1.0 `broadcastRefresh`。
@@ -358,41 +441,90 @@ pub fn close_panels(app: &AppHandle) -> tauri::Result<()> {
     if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {
         compact.hide()?;
     }
-    app.state::<PanelDismissed>().0.store(true, Ordering::Relaxed);
     Ok(())
 }
 
+/// 托盤左鍵的入口。
+///
+/// **這次跟前 4 次失敗最大的差異：徹底拔除可見性狀態機**。前 4 次都基於
+/// 「visible→hide、hidden→show」的 toggle 假設，但五位專家平行診斷確認：
+///   - is_visible() 走 IsWindowVisible 只查 WS_VISIBLE bit，對 transparent +
+///     skipTaskbar + layered 視窗在儲存設定後常回報 true 但實際被壓在 z-order 底層看不見
+///   - 加 grace、加 AtomicBool、加 is_focused() 判斷都只是在不可靠抽象上堆狀態，治標不治本
+///
+/// 新語意：**tray click = 永遠強制 show**。隱藏由前端關閉按鈕 / Quit menu 處理。
+/// debounce 仍保留以擋 Windows 雙擊被當成兩次 click 的情形。
 pub fn toggle_preferred_panel(app: &AppHandle) -> tauri::Result<()> {
-    let dismissed = app.state::<PanelDismissed>().0.load(Ordering::Relaxed);
-    let settings = load_settings();
+    let timings = app.state::<PanelTimings>();
+    let now = now_ms();
+    let last_toggle = timings.last_toggle_at.load(Ordering::Relaxed);
+    if now - last_toggle < TRAY_DEBOUNCE_MS {
+        diag::log_line("toggle_preferred_panel:debounced");
+        return Ok(());
+    }
+    timings.last_toggle_at.store(now, Ordering::Relaxed);
 
-    if dismissed {
-        if settings.preferred_display_mode.as_deref() == Some("compact") {
-            show_compact_panel(app)
-        } else {
-            show_expanded_panel(app)
+    diag::log_line("toggle_preferred_panel:enter");
+    #[cfg(windows)]
+    {
+        let settings_dbg = load_settings();
+        let is_compact_dbg = settings_dbg.preferred_display_mode.as_deref() == Some("compact");
+        let label = if is_compact_dbg { COMPACT_WINDOW_LABEL } else { EXPANDED_WINDOW_LABEL };
+        if let Some(w) = app.get_webview_window(label) {
+            let tauri_visible = w.is_visible().unwrap_or(false);
+            if let Ok(hwnd) = w.hwnd() {
+                diag::log_line(&format!(
+                    "toggle:tauri-is-visible={} (compare Win32 IsWindowVisible below)",
+                    tauri_visible
+                ));
+                diag::snapshot("toggle_preferred_panel:before-show", hwnd.0 as isize);
+            }
         }
+    }
+
+    let settings = load_settings();
+    let is_compact = settings.preferred_display_mode.as_deref() == Some("compact");
+
+    // 永遠強制 show——不查可見性。show_*_panel 內部負責：position → show →
+    // diag::force_topmost(Win32 SetWindowPos + BringWindowToTop)，即使視窗已 visible
+    // 但被壓在 z-order 底層也會被拉回頂部。
+    if is_compact {
+        show_compact_panel(app)
     } else {
-        close_panels(app)
+        show_expanded_panel(app)
     }
 }
 
 pub fn update_window_geometries(app: &AppHandle, settings: &AppStore) -> tauri::Result<()> {
+    diag::log_line("update_window_geometries:enter");
     if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {
         if compact.is_visible().unwrap_or(false) {
             position_compact_window(&compact, settings)?;
+            // position_compact_window 內 set_size/set_position 走 SetWindowPos 但不帶
+            // SWP_NOZORDER，把 HWND_TOPMOST 靜默降級成 HWND_TOP；改用 force_topmost
+            // 直接打 Win32 SetWindowPos(HWND_TOPMOST) + BringWindowToTop 守住 z-order。
+            #[cfg(windows)]
+            if let Ok(hwnd) = compact.hwnd() {
+                diag::force_topmost(hwnd.0 as isize);
+            }
         }
     }
     if let Some(expanded) = app.get_webview_window(EXPANDED_WINDOW_LABEL) {
         if expanded.is_visible().unwrap_or(false) {
-            let input = *app
-                .state::<ExpandedWindowState>()
-                .inner
-                .lock()
-                .expect("expanded window state poisoned");
+            let input = match app.state::<ExpandedWindowState>().inner.lock() {
+                Ok(guard) => *guard,
+                Err(poisoned) => *poisoned.into_inner(),
+            };
             position_expanded_window(&expanded, settings, input)?;
+            #[cfg(windows)]
+            if let Ok(hwnd) = expanded.hwnd() {
+                diag::snapshot("update_window_geometries:expanded-after-position", hwnd.0 as isize);
+                diag::force_topmost(hwnd.0 as isize);
+                diag::snapshot("update_window_geometries:expanded-after-force-topmost", hwnd.0 as isize);
+            }
         }
     }
+    diag::log_line("update_window_geometries:exit");
     Ok(())
 }
 
