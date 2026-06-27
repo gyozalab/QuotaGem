@@ -90,21 +90,13 @@ QuotaGem detects the signed-in local Antigravity language server and calls a rea
 - Traditional Chinese and English UI languages.
 - Launch-at-login support. For portable builds, running the moved exe once refreshes the startup path.
 
-Under the hood it is built on Tauri (Rust + the system WebView2), so the installer is a few MB and it sips memory while sitting in your tray all day.
+Under the hood it is built on Tauri (Rust + the system WebView2), so the download is a few MB and it sips memory while sitting in your tray all day.
 
 ## Download
 
 Go to the [Releases](https://github.com/gyozalab/QuotaGem/releases) page and download the latest portable package (`QuotaGem_*_x64-portable.zip`). Extract it, run `quotagem.exe`, and enable launch-at-login from the settings panel if you want QuotaGem to start with Windows.
 
-The portable build is the recommended Windows artifact until the installer is code-signed and its Microsoft Defender reputation is settled. Launch-at-login points to the current `quotagem.exe` path; if you move the app, run it once from the new location to refresh the Windows startup entry.
-
-```text
-QuotaGem_2.0.0_x64-portable.zip
-```
-
-Extract it and run `quotagem.exe`. To start QuotaGem with Windows, enable launch-at-login from the settings panel.
-
-For now, download the portable zip. Installer builds are not the recommended download yet.
+Launch-at-login points to the current `quotagem.exe` path; if you move the app, run it once from the new location to refresh the Windows startup entry.
 
 ## Development
 
@@ -120,7 +112,3 @@ npx tauri dev      # development
 npx tauri build    # build the app and Windows bundles
 npm run package:portable
 ```
-
-## Status
-
-The Tauri 2.0 rewrite is feature-complete: all three providers, both panels, settings, alerts, themes, i18n, launch-at-login, and single-instance startup protection are in place. Portable zip is the recommended release artifact for now; MSI/NSIS installers are built but should wait for signing and Defender false-positive review before being promoted as the default download.

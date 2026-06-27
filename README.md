@@ -90,25 +90,13 @@
 - 繁體中文與英文介面。
 - 開機自啟，portable exe 搬動後重新執行即可更新啟動路徑。
 
-底層用 Tauri（Rust + 系統內建 WebView2）打造，安裝檔個位數 MB、記憶體佔用低，常駐一整天也很安靜。
+底層用 Tauri（Rust + 系統內建 WebView2）打造，免安裝版個位數 MB、記憶體佔用低，常駐一整天也很安靜。
 
 ## 下載使用
 
 前往 [Releases](https://github.com/gyozalab/QuotaGem/releases) 頁面，下載最新的免安裝版（`QuotaGem_*_x64-portable.zip`）。解壓縮後執行 `quotagem.exe`，需要跟著 Windows 啟動時，再到設定面板開啟開機自啟。
 
-目前 Windows 發佈建議以免安裝版為主；安裝器會等程式碼簽章與 Microsoft Defender 誤判申訴穩定後再作為預設下載。開機自啟會指向目前執行的 `quotagem.exe` 路徑；如果你搬動 exe，從新位置執行一次即可更新 Windows 開機啟動項。
-
-## 目前狀態
-
-QuotaGem 2.0 的 Tauri 重寫已完成主要功能：三個 provider、展開與精簡面板、設定、告警、主題、語系、開機自啟、單一實例保護與免安裝版打包流程都已就緒。現階段建議優先發布 portable zip；MSI / NSIS 安裝器先保留為建置產物，等簽章與 Defender 誤判處理穩定後再升為預設下載。
-
-```text
-QuotaGem_2.0.0_x64-portable.zip
-```
-
-解壓縮後執行 `quotagem.exe`。若想讓 QuotaGem 跟著 Windows 啟動，可在設定面板開啟「開機自啟」。
-
-目前請優先下載 zip 免安裝版；安裝器版本暫時不作為主要下載。
+開機自啟會指向目前執行的 `quotagem.exe` 路徑；如果你搬動 exe，從新位置執行一次即可更新 Windows 開機啟動項。
 
 ## 開發
 
