@@ -25,18 +25,15 @@
 
 ### 展開面板
 
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板" width="66%" />
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem 展開面板，同時顯示 Claude、Codex 與 Antigravity 用量" width="66%" />
 
 ### 精簡面板
 
-<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板" width="66%" />
+<img src="./docs/images/compact-panel.png" alt="QuotaGem 精簡面板，三個 provider 的圓環設計，Antigravity 以雙色分割環顯示" width="66%" />
 
-### 單獨顯示某個服務
+### 用量警告與危險提醒
 
-<p>
-  <img src="./docs/images/only-claude.png" alt="QuotaGem 只顯示 Claude" width="49%" />
-  <img src="./docs/images/only-codex.png" alt="QuotaGem 只顯示 Codex" width="49%" />
-</p>
+<img src="./docs/images/expanded-panel-alerts.png" alt="QuotaGem 展開面板顯示警告與危險門檻提醒" width="66%" />
 
 ### 設定面板
 
@@ -44,11 +41,14 @@
 
 ### 淺色主題
 
-<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="66%" />
+<p>
+  <img src="./docs/images/expanded-panel-white.png" alt="QuotaGem 淺色展開面板" width="49%" />
+  <img src="./docs/images/compact-panel-white.png" alt="QuotaGem 淺色精簡面板" width="49%" />
+</p>
 
 ### 系統匣圖示
 
-<img src="./docs/images/tray-icon-list.png" alt="QuotaGem tray icon" width="33%" />
+<img src="./docs/images/tray-icon-list.png" alt="QuotaGem 系統匣圖示" width="33%" />
 
 ## 支援的用量來源
 

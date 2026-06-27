@@ -25,18 +25,15 @@ It helps you check:
 
 ### Expanded panel
 
-<img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel" width="66%" />
+<img src="./docs/images/expanded-panel.png" alt="QuotaGem expanded panel showing Claude, Codex, and Antigravity usage" width="66%" />
 
 ### Compact panel
 
-<img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel" width="66%" />
+<img src="./docs/images/compact-panel.png" alt="QuotaGem compact panel with ring design for all three providers; Antigravity uses a split ring" width="66%" />
 
-### Single-provider view
+### Warning and danger alerts
 
-<p>
-  <img src="./docs/images/only-claude.png" alt="QuotaGem Claude-only view" width="49%" />
-  <img src="./docs/images/only-codex.png" alt="QuotaGem Codex-only view" width="49%" />
-</p>
+<img src="./docs/images/expanded-panel-alerts.png" alt="QuotaGem expanded panel showing warning and danger threshold alerts" width="66%" />
 
 ### Settings Panel
 
@@ -44,7 +41,10 @@ It helps you check:
 
 ### Light Theme
 
-<img src="./docs/images/expanded-panel-white.png" alt="QuotaGem light expanded panel" width="66%" />
+<p>
+  <img src="./docs/images/expanded-panel-white.png" alt="QuotaGem light expanded panel" width="49%" />
+  <img src="./docs/images/compact-panel-white.png" alt="QuotaGem light compact panel" width="49%" />
+</p>
 
 ### Tray Icon
 
