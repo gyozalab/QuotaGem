@@ -19,6 +19,19 @@ pub fn create_unavailable_snapshot(provider: ProviderId, display_name: String) -
     }
 }
 
+/// 把 provider 的 Result 收斂成 snapshot；失敗時先記下原因再轉 Unavailable，
+/// 避免錯誤被 `|_|` 靜默吞掉（claude / codex / antigravity 三個共用）。
+fn or_unavailable(
+    result: anyhow::Result<UsageSnapshot>,
+    provider: ProviderId,
+    display_name: &str,
+) -> UsageSnapshot {
+    result.unwrap_or_else(|e| {
+        log::warn!("{} provider unavailable: {:#}", display_name, e);
+        create_unavailable_snapshot(provider, display_name.to_string())
+    })
+}
+
 pub async fn get_all_snapshots(
     claude_key: Option<String>,
     claude_org: Option<String>,
@@ -68,38 +81,38 @@ pub async fn get_visible_snapshots(
             );
 
             vec![
-                claude_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Claude, "Claude".to_string())),
-                codex_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Codex, "Codex".to_string())),
-                antigravity_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Antigravity, "Antigravity".to_string())),
+                or_unavailable(claude_res, ProviderId::Claude, "Claude"),
+                or_unavailable(codex_res, ProviderId::Codex, "Codex"),
+                or_unavailable(antigravity_res, ProviderId::Antigravity, "Antigravity"),
             ]
         }
         (true, true, false) => {
             let (claude_res, codex_res) = tokio::join!(claude.snapshot(), codex.snapshot());
 
             vec![
-                claude_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Claude, "Claude".to_string())),
-                codex_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Codex, "Codex".to_string())),
+                or_unavailable(claude_res, ProviderId::Claude, "Claude"),
+                or_unavailable(codex_res, ProviderId::Codex, "Codex"),
             ]
         }
         (true, false, true) => {
             let (claude_res, antigravity_res) = tokio::join!(claude.snapshot(), antigravity.snapshot());
 
             vec![
-                claude_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Claude, "Claude".to_string())),
-                antigravity_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Antigravity, "Antigravity".to_string())),
+                or_unavailable(claude_res, ProviderId::Claude, "Claude"),
+                or_unavailable(antigravity_res, ProviderId::Antigravity, "Antigravity"),
             ]
         }
         (false, true, true) => {
             let (codex_res, antigravity_res) = tokio::join!(codex.snapshot(), antigravity.snapshot());
 
             vec![
-                codex_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Codex, "Codex".to_string())),
-                antigravity_res.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Antigravity, "Antigravity".to_string())),
+                or_unavailable(codex_res, ProviderId::Codex, "Codex"),
+                or_unavailable(antigravity_res, ProviderId::Antigravity, "Antigravity"),
             ]
         }
-        (true, false, false) => vec![claude.snapshot().await.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Claude, "Claude".to_string()))],
-        (false, true, false) => vec![codex.snapshot().await.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Codex, "Codex".to_string()))],
-        (false, false, true) => vec![antigravity.snapshot().await.unwrap_or_else(|_| create_unavailable_snapshot(ProviderId::Antigravity, "Antigravity".to_string()))],
+        (true, false, false) => vec![or_unavailable(claude.snapshot().await, ProviderId::Claude, "Claude")],
+        (false, true, false) => vec![or_unavailable(codex.snapshot().await, ProviderId::Codex, "Codex")],
+        (false, false, true) => vec![or_unavailable(antigravity.snapshot().await, ProviderId::Antigravity, "Antigravity")],
         (false, false, false) => Vec::new(),
     }
 }
