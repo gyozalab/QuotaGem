@@ -54,18 +54,18 @@ impl AntigravityProvider {
         Self { client }
     }
 
-    async fn post_rpc(&self, port: u16, scheme: &str, csrf: &str, method: &str) -> Option<serde_json::Value> {
+    async fn post_rpc(&self, port: u16, scheme: &str, csrf: Option<&str>, method: &str) -> Option<serde_json::Value> {
         let url = format!(
             "{}://127.0.0.1:{}/exa.language_server_pb.LanguageServerService/{}",
             scheme, port, method
         );
-        let res = self.client.post(&url)
+        let mut req = self.client.post(&url)
             .header("Content-Type", "application/json")
-            .header("Connect-Protocol-Version", "1")
-            .header("X-Codeium-Csrf-Token", csrf)
-            .body("{}")
-            .send()
-            .await;
+            .header("Connect-Protocol-Version", "1");
+        if let Some(token) = csrf {
+            req = req.header("X-Codeium-Csrf-Token", token);
+        }
+        let res = req.body("{}").send().await;
 
         match res {
             Ok(response) => {
@@ -228,7 +228,10 @@ impl Provider for AntigravityProvider {
     async fn snapshot(&self) -> anyhow::Result<UsageSnapshot> {
         let command = r#"
         $processes = @(Get-CimInstance Win32_Process | Where-Object {
-          $_.ProcessId -ne $PID -and $_.CommandLine -match '--csrf_token'
+          $_.ProcessId -ne $PID -and (
+            $_.CommandLine -match '--csrf_token' -or
+            $_.Name -match '^agy(\.exe)?$'
+          )
         })
         $connections = if ($processes.Count -gt 0) {
           @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)
@@ -278,10 +281,7 @@ impl Provider for AntigravityProvider {
                 _ => continue,
             };
 
-            let csrf = match extract_csrf(cmd_line) {
-                Some(c) => c,
-                None => continue,
-            };
+            let csrf = extract_csrf(cmd_line);
 
             let ports_val = match proc.ports {
                 Some(ref val) => val,
@@ -292,7 +292,8 @@ impl Provider for AntigravityProvider {
 
             for port in ports {
                 for scheme in &["http", "https"] {
-                    let status_val = self.post_rpc(port, scheme, &csrf, "GetUserStatus").await;
+                    let csrf_ref = csrf.as_deref();
+                    let status_val = self.post_rpc(port, scheme, csrf_ref, "GetUserStatus").await;
                     let status = match status_val {
                         Some(ref val) => val,
                         None => continue,
@@ -302,7 +303,7 @@ impl Provider for AntigravityProvider {
                         continue;
                     }
 
-                    let summary = self.post_rpc(port, scheme, &csrf, "RetrieveUserQuotaSummary").await;
+                    let summary = self.post_rpc(port, scheme, csrf_ref, "RetrieveUserQuotaSummary").await;
                     if let Some(sum_val) = summary {
                         let last_updated = Utc::now().to_rfc3339();
                         if let Some(snap) = extract_antigravity_quota(sum_val, last_updated) {

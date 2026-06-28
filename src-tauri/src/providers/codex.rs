@@ -90,8 +90,13 @@ impl Provider for CodexProvider {
             if let Ok(event) = serde_json::from_str::<CodexJsonlEvent>(trimmed) {
                 if let Some(ref payload) = event.payload {
                     if payload.r#type.as_deref() == Some("token_count") {
-                        token_count_event = Some(event);
-                        break;
+                        // 跳過 primary/secondary 為 null 的事件（credits 方案沒有百分比配額）
+                        if let Some(ref rl) = payload.rate_limits {
+                            if rl.primary.is_some() && rl.secondary.is_some() {
+                                token_count_event = Some(event);
+                                break;
+                            }
+                        }
                     }
                 }
             }
