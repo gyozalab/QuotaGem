@@ -69,7 +69,7 @@ QuotaGem uses the built-in `Connect Claude` flow to store the required session i
 
 ### Codex
 
-QuotaGem reads the newest local session record under `.codex/sessions`, finds the latest `token_count` event, and displays the current rate-limit state.
+QuotaGem first asks the local `codex app-server` for account-level rate limits, so the displayed quota includes desktop background usage. If app-server data is unavailable, it falls back to parsing session JSONL files under `.codex/sessions`.
 
 ### Antigravity
 

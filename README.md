@@ -69,7 +69,7 @@
 
 ### Codex
 
-讀取本機 `.codex/sessions` 中最新 session 紀錄，解析最後的 `token_count` 事件，顯示目前 rate limit 狀態。
+優先透過本機 `codex app-server` 讀取帳號層 rate limit，顯示包含桌面版背景消耗在內的即時額度狀態。若 app-server 無法取得資料，會 fallback 到 `.codex/sessions` 的 session JSONL 解析。
 
 ### Antigravity
 
@@ -125,5 +125,5 @@ npm run package:portable
 portable zip 會輸出到：
 
 ```text
-src-tauri\target\release\bundle\portable\QuotaGem_2.0.0_x64-portable.zip
+src-tauri\target\release\bundle\portable\QuotaGem_2.0.1_x64-portable.zip
 ```
