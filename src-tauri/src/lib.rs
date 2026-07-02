@@ -4,6 +4,7 @@ pub mod models;
 pub mod provider;
 pub mod providers;
 pub mod refresh;
+pub mod system;
 pub mod tray;
 pub mod windows;
 
@@ -268,6 +269,11 @@ fn log_frontend_error(message: String) {
   crate::diag::log_line(&format!("FRONTEND_ERROR {}", message));
 }
 
+#[tauri::command]
+fn fetch_system_state(app: tauri::AppHandle) -> system::SystemState {
+  app.state::<system::SystemSampler>().snapshot()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -287,6 +293,7 @@ pub fn run() {
     .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())
     .manage(windows::PanelTimings::default())
+    .manage(system::SystemSampler::default())
     .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
@@ -298,7 +305,8 @@ pub fn run() {
       sync_expanded_layout,
       refresh_usage,
       _test_simulate_save,
-      log_frontend_error
+      log_frontend_error,
+      fetch_system_state
     ])
     .on_window_event(|window, event| {
       if matches!(window.label(), "main" | "compact") {

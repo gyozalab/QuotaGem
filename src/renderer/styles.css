@@ -50,6 +50,10 @@
   --row-warning: rgba(224, 165, 46, 0.3);
   --row-danger: rgba(226, 87, 76, 0.32);
   --row-danger-strong: rgba(226, 87, 76, 0.42);
+  --system-cpu: #16c980;
+  --system-gpu: #20b58a;
+  --system-ram: #ffad43;
+  --system-net: #38b7c7;
 }
 
 * {
@@ -201,6 +205,90 @@ select {
   flex-direction: column;
   gap: 14px;
 }
+
+.system-monitor {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--panel-border-rgb), 0.12);
+  display: grid;
+  gap: 7px;
+}
+
+.system-monitor__title {
+  color: rgba(var(--panel-muted-rgb), 0.62);
+  font-size: 12px;
+}
+
+.system-monitor__rows {
+  display: grid;
+  gap: 7px;
+}
+
+.system-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 48px;
+  align-items: center;
+  gap: 9px;
+  min-height: 18px;
+  color: rgba(var(--panel-text-rgb), 0.9);
+}
+
+.system-row__label {
+  color: rgba(var(--panel-muted-rgb), 0.72);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.system-row__track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--panel-border-rgb), 0.13);
+}
+
+.system-row__fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--system-cpu);
+  transition: width 160ms ease;
+}
+
+.system-row--gpu .system-row__fill {
+  background: var(--system-gpu);
+}
+
+.system-row--ram .system-row__fill {
+  background: var(--system-ram);
+}
+
+.system-row--net .system-row__track {
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(56, 183, 199, 0.45) 12% 14%, transparent 14% 52%, rgba(56, 183, 199, 0.5) 52% 54%, transparent 54% 78%, rgba(56, 183, 199, 0.85) 78% 82%, transparent 82%),
+    linear-gradient(180deg, transparent 45%, rgba(56, 183, 199, 0.32) 45% 55%, transparent 55%);
+}
+
+.system-row--net .system-row__fill {
+  display: none;
+}
+
+.system-row--danger .system-row__fill {
+  background: var(--ring-danger);
+}
+
+.system-row--unavailable {
+  opacity: 0.5;
+}
+
+.system-row__readout {
+  color: rgba(var(--panel-text-rgb), 0.88);
+	  font-size: 12px;
+	  font-weight: 600;
+	  font-variant-numeric: tabular-nums;
+	  text-align: right;
+	  white-space: nowrap;
+	}
 
 .provider-block {
   display: flex;
@@ -442,7 +530,8 @@ select {
 }
 
 .compact-widget__content {
-  display: block;
+  display: grid;
+  gap: 9px;
   border: none;
   background: transparent;
   color: inherit;
@@ -463,6 +552,50 @@ select {
 
 .compact-widget__rings--three {
   gap: 14px;
+}
+
+.compact-system {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.compact-system__item {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  color: rgba(var(--panel-text-rgb), 0.82);
+  font-variant-numeric: tabular-nums;
+}
+
+.compact-system__label {
+  color: rgba(var(--panel-muted-rgb), 0.58);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.compact-system__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(var(--panel-text-rgb), 0.86);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.compact-system__item--cpu .compact-system__value {
+  color: var(--system-cpu);
+}
+
+.compact-system__item--ram .compact-system__value {
+  color: var(--system-ram);
+}
+
+.compact-system__item--net .compact-system__value {
+  color: var(--system-net);
 }
 
 /* 設定：三 provider 各自開關 */

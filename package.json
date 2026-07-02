@@ -1,7 +1,7 @@
 {
   "name": "quota-gem",
   "version": "2.0.1",
-  "description": "Windows tray utility for unified Claude, Codex, and Antigravity usage visibility under the QuotaGem brand.",
+  "description": "Desktop menu bar and tray utility for unified system, Claude, Codex, and Antigravity usage visibility under the QuotaGem brand.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,7 +14,9 @@
   },
   "keywords": [
     "tray",
+    "macos",
     "windows",
+    "system-monitor",
     "claude",
     "codex",
     "antigravity",

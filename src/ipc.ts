@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { UsageDashboardState } from "./shared/dashboard";
+import type { SystemState, UsageDashboardState } from "./shared/dashboard";
 import { normalizeProviderUsage, formatDateParts, type ProviderUsageSnapshot } from "./shared/usage";
 import { t } from "./shared/i18n";
 
@@ -110,6 +110,9 @@ function toDashboardState(raw: RawUsageResponse): UsageDashboardState {
 const ipcAdapter = {
   fetchUsageState: async (): Promise<UsageDashboardState> => {
     return toDashboardState(await invoke<RawUsageResponse>("fetch_usage_state"));
+  },
+  fetchSystemState: async (): Promise<SystemState> => {
+    return invoke<SystemState>("fetch_system_state");
   },
   syncExpandedLayout: async (layout: {
     contentHeight: number;

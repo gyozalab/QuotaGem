@@ -26,7 +26,7 @@ fn now_ms() -> i64 {
 const COMPACT_WINDOW_LABEL: &str = "compact";
 const EXPANDED_WINDOW_LABEL: &str = "main";
 const WINDOW_MARGIN: f64 = 14.0;
-const COMPACT_HEIGHT: f64 = 150.0;
+const COMPACT_HEIGHT: f64 = 174.0;
 const PANEL_SCALE_OPTIONS: [f64; 5] = [85.0, 100.0, 115.0, 130.0, 150.0];
 
 // expanded 面板基準（移植自 1.0 `expanded-layout.ts` / `panel-layout.ts`）
