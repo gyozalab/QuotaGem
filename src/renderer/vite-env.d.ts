@@ -1,11 +1,12 @@
 /// <reference types="vite/client" />
 
-import type { UsageDashboardState } from "../shared/dashboard";
+import type { SystemState, UsageDashboardState } from "../shared/dashboard";
 
 declare global {
   interface Window {
     trayUsageWidget: {
       fetchUsageState: () => Promise<UsageDashboardState>;
+      fetchSystemState: () => Promise<SystemState>;
       syncExpandedLayout: (layout: {
         contentHeight: number;
         settingsOpen: boolean;

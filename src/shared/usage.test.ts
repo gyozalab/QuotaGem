@@ -83,6 +83,39 @@ describe("normalizeProviderUsage", () => {
     expect(normalized.weekly.level).toBe("warning");
   });
 
+  it("formats reset time in Taiwan Standard Time when requested", async () => {
+    const usageModule = await import("./usage");
+    const normalizeProviderUsage = Reflect.get(
+      usageModule,
+      "normalizeProviderUsage",
+    );
+
+    expect(typeof normalizeProviderUsage).toBe("function");
+
+    if (typeof normalizeProviderUsage !== "function") {
+      return;
+    }
+
+    const snapshot: ProviderUsageSnapshot = {
+      provider: "claude",
+      displayName: "Claude",
+      sessionPercent: 12,
+      sessionResetAt: "2026-03-29T13:40:00.000Z",
+      weeklyPercent: 80,
+      weeklyResetAt: "2026-04-03T06:18:00.000Z",
+      lastUpdated: "2026-03-28T02:00:00.000Z",
+    };
+
+    const normalized = normalizeProviderUsage(snapshot, {
+      language: "en",
+      timeDisplay: "tst",
+      timeFormat: "24h",
+    });
+
+    expect(normalized.session.resetLabel).toBe("2026-03-29 21:40 TST");
+    expect(normalized.weekly.resetLabel).toBe("2026-04-03 14:18 TST");
+  });
+
   it("supports alternate date formats for reset labels", async () => {
     const usageModule = await import("./usage");
     const normalizeProviderUsage = Reflect.get(

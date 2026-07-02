@@ -20,7 +20,7 @@ export interface WidgetPreferences {
   notificationsEnabled: boolean;
   notificationLevel: "all" | "danger";
   language: WidgetLanguage;
-  timeDisplay: "utc" | "local";
+  timeDisplay: "utc" | "tst" | "local";
   timeFormat: "24h" | "12h";
   dateFormat: DateFormatPreference;
   panelScale: PanelScalePercent;
@@ -32,4 +32,17 @@ export interface UsageDashboardState {
   providers: NormalizedProviderUsage[];
   lastUpdatedLabel: string;
   preferences: WidgetPreferences;
+}
+
+export interface SystemMetric {
+  id: "cpu" | "gpu" | "ram" | "net";
+  label: string;
+  percent: number | null;
+  readout: string;
+  available: boolean;
+}
+
+export interface SystemState {
+  metrics: SystemMetric[];
+  lastUpdated: string;
 }

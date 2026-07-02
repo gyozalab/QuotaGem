@@ -60,6 +60,15 @@ describe("App", () => {
 
     window.trayUsageWidget = {
       fetchUsageState: vi.fn().mockResolvedValue(state),
+      fetchSystemState: vi.fn().mockResolvedValue({
+        metrics: [
+          { id: "cpu", label: "CPU", percent: 17, readout: "17%", available: true },
+          { id: "gpu", label: "GPU", percent: 2, readout: "2%", available: true },
+          { id: "ram", label: "RAM", percent: 68, readout: "68%", available: true },
+          { id: "net", label: "NET", percent: null, readout: "96k/s", available: true },
+        ],
+        lastUpdated: "2026-07-02T06:00:00.000Z",
+      }),
       syncExpandedLayout: vi.fn().mockResolvedValue(undefined),
       openExpandedPanel: vi.fn().mockResolvedValue(undefined),
       openCompactPanel: vi.fn().mockResolvedValue(undefined),
@@ -93,9 +102,7 @@ describe("App", () => {
       await screen.findByRole("button", { name: "Open settings" }),
     );
 
-    const launchAtLogin = await screen.findByLabelText(
-      "Launch on Windows sign-in",
-    );
+    const launchAtLogin = await screen.findByLabelText("Launch at login");
 
     expect(launchAtLogin).not.toBeChecked();
 

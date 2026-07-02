@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { UsageDashboardState } from "./shared/dashboard";
+import type { SystemState, UsageDashboardState } from "./shared/dashboard";
 import { normalizeProviderUsage, formatDateParts, type ProviderUsageSnapshot } from "./shared/usage";
 import { t } from "./shared/i18n";
 
@@ -13,7 +13,7 @@ function buildLastUpdatedLabel(
   snapshots: { lastUpdated: string }[],
   preferences: {
     language: any;
-    timeDisplay: "utc" | "local";
+    timeDisplay: "utc" | "tst" | "local";
     timeFormat: "24h" | "12h";
     dateFormat: any;
   },
@@ -53,7 +53,12 @@ function buildLastUpdatedLabel(
     hour: "2-digit",
     minute: "2-digit",
     hour12: preferences.timeFormat === "12h",
-    timeZone: preferences.timeDisplay === "utc" ? "UTC" : undefined,
+    timeZone:
+      preferences.timeDisplay === "utc"
+        ? "UTC"
+        : preferences.timeDisplay === "tst"
+          ? "Asia/Taipei"
+          : undefined,
   }).formatToParts(date);
 
   const pick = (type: Intl.DateTimeFormatPartTypes) =>
@@ -62,7 +67,9 @@ function buildLastUpdatedLabel(
   const suffix =
     preferences.timeDisplay === "utc"
       ? t(preferences.language, "utcSuffix")
-      : t(preferences.language, "localSuffix");
+      : preferences.timeDisplay === "tst"
+        ? t(preferences.language, "tstSuffix")
+        : t(preferences.language, "localSuffix");
   const formattedDate = formatDateParts({
     year: pick("year"),
     month: pick("month"),
@@ -110,6 +117,9 @@ function toDashboardState(raw: RawUsageResponse): UsageDashboardState {
 const ipcAdapter = {
   fetchUsageState: async (): Promise<UsageDashboardState> => {
     return toDashboardState(await invoke<RawUsageResponse>("fetch_usage_state"));
+  },
+  fetchSystemState: async (): Promise<SystemState> => {
+    return invoke<SystemState>("fetch_system_state");
   },
   syncExpandedLayout: async (layout: {
     contentHeight: number;

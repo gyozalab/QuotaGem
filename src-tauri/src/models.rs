@@ -105,7 +105,7 @@ impl Default for AppStore {
             notifications_enabled: Some(true),
             notification_level: Some("all".to_string()),
             language: Some("zh-TW".to_string()),
-            time_display: Some("utc".to_string()),
+            time_display: Some("tst".to_string()),
             time_format: Some("24h".to_string()),
             date_format: Some("iso".to_string()),
             panel_scale: Some(100.0),
@@ -149,6 +149,36 @@ pub fn coerce_provider_visibility(val: &Option<serde_json::Value>) -> ProviderVi
 }
 
 pub fn get_settings_path() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        return std::env::var("APPDATA")
+            .ok()
+            .map(|appdata| PathBuf::from(appdata).join("quota-gem").join("quota-gem.json"));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return std::env::var("HOME").ok().map(|home| {
+            PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("quota-gem")
+                .join("quota-gem.json")
+        });
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if let Ok(config_home) = std::env::var("XDG_CONFIG_HOME") {
+            return Some(PathBuf::from(config_home).join("quota-gem").join("quota-gem.json"));
+        }
+
+        return std::env::var("HOME")
+            .ok()
+            .map(|home| PathBuf::from(home).join(".config").join("quota-gem").join("quota-gem.json"));
+    }
+
+    #[allow(unreachable_code)]
     std::env::var("APPDATA")
         .ok()
         .map(|appdata| PathBuf::from(appdata).join("quota-gem").join("quota-gem.json"))
@@ -191,7 +221,7 @@ impl AppStore {
             notifications_enabled: self.notifications_enabled.unwrap_or(true),
             notification_level: self.notification_level.clone().unwrap_or_else(|| "all".to_string()),
             language: self.language.clone().unwrap_or_else(|| "en".to_string()),
-            time_display: self.time_display.clone().unwrap_or_else(|| "utc".to_string()),
+            time_display: self.time_display.clone().unwrap_or_else(|| "tst".to_string()),
             time_format: self.time_format.clone().unwrap_or_else(|| "24h".to_string()),
             date_format: self.date_format.clone().unwrap_or_else(|| "iso".to_string()),
             panel_scale: self.panel_scale.unwrap_or(100.0),
@@ -212,6 +242,13 @@ mod tests {
         assert!(visibility.claude);
         assert!(visibility.codex);
         assert!(visibility.antigravity);
+    }
+
+    #[test]
+    fn settings_path_is_available_on_supported_desktop_platforms() {
+        let path = super::get_settings_path().expect("settings path should be available");
+        assert!(path.ends_with("quota-gem.json"));
+        assert!(path.to_string_lossy().contains("quota-gem"));
     }
 
     #[test]
@@ -286,4 +323,3 @@ pub struct UsageStateResponse {
     pub snapshots: Vec<UsageSnapshot>,
     pub preferences: WidgetPreferences,
 }
-
