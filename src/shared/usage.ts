@@ -66,7 +66,7 @@ export function normalizeProviderUsage(
   snapshot: ProviderUsageSnapshot,
   options: {
     language: WidgetLanguage;
-    timeDisplay: "utc" | "local";
+    timeDisplay: "utc" | "tst" | "local";
     timeFormat: "24h" | "12h";
     dateFormat?: DateFormatPreference;
     warningThreshold?: number;
@@ -157,7 +157,7 @@ function getUsageLevel(
 function formatResetDisplay(
   value: number | string | Date | null,
   language: WidgetLanguage,
-  timeDisplay: "utc" | "local",
+  timeDisplay: "utc" | "tst" | "local",
   timeFormat: "24h" | "12h",
   dateFormat: DateFormatPreference = "iso",
   locale = "en-US",
@@ -184,14 +184,23 @@ function formatResetDisplay(
     hour: "2-digit",
     minute: "2-digit",
     hour12: timeFormat === "12h",
-    timeZone: timeDisplay === "utc" ? "UTC" : undefined,
+    timeZone:
+      timeDisplay === "utc"
+        ? "UTC"
+        : timeDisplay === "tst"
+          ? "Asia/Taipei"
+          : undefined,
   }).formatToParts(date);
 
   const pick = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
 
   const suffix =
-    timeDisplay === "utc" ? t(language, "utcSuffix") : t(language, "localSuffix");
+    timeDisplay === "utc"
+      ? t(language, "utcSuffix")
+      : timeDisplay === "tst"
+        ? t(language, "tstSuffix")
+        : t(language, "localSuffix");
   const dayPeriod = pick("dayPeriod");
 
   return `${formatDateParts({

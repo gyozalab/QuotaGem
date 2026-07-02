@@ -14,6 +14,7 @@ type TranslationKey =
   | "unavailable"
   | "live"
   | "localSuffix"
+  | "tstSuffix"
   | "utcSuffix"
   | "settings"
   | "closeSettings"
@@ -97,13 +98,14 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     unavailable: "Unavailable",
     live: "Live",
     localSuffix: "Local",
+    tstSuffix: "TST",
     utcSuffix: "UTC",
     settings: "Settings",
     closeSettings: "Close settings",
     connectClaude: "Connect Claude",
     waitingForClaudeLogin: "Waiting for Claude login...",
     preferredDisplayMode: "Default panel to open",
-    launchAtLogin: "Launch on Windows sign-in",
+    launchAtLogin: "Launch at login",
     providerVisibility: "Show providers",
     expandedPanel: "Expanded panel",
     compactPanel: "Compact panel",
@@ -182,13 +184,14 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     unavailable: "無法取得",
     live: "即時",
     localSuffix: "本機",
+    tstSuffix: "TST",
     utcSuffix: "UTC",
     settings: "設定",
     closeSettings: "關閉設定",
     connectClaude: "連接 Claude",
     waitingForClaudeLogin: "等待 Claude 登入中...",
     preferredDisplayMode: "預設開啟面板",
-    launchAtLogin: "Windows 登入時啟動",
+    launchAtLogin: "登入時啟動",
     providerVisibility: "顯示項目",
     expandedPanel: "大面板",
     compactPanel: "小面板",

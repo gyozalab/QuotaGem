@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 
+import type { SystemMetric, SystemState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
 import type {
   NormalizedProviderUsage,
@@ -10,6 +11,7 @@ export interface UsagePanelProps {
   mode: "expanded" | "compact";
   panelRef?: Ref<HTMLElement>;
   providers: NormalizedProviderUsage[];
+  systemState?: SystemState;
   language: WidgetLanguage;
   loading: boolean;
   lastUpdatedLabel: string;
@@ -20,10 +22,18 @@ export interface UsagePanelProps {
   onClose?: () => void;
 }
 
+const DEFAULT_SYSTEM_METRICS: SystemMetric[] = [
+  { id: "cpu", label: "CPU", percent: null, readout: "—", available: false },
+  { id: "gpu", label: "GPU", percent: null, readout: "—", available: false },
+  { id: "ram", label: "RAM", percent: null, readout: "—", available: false },
+  { id: "net", label: "NET", percent: null, readout: "—", available: false },
+];
+
 export function UsagePanel({
   mode,
   panelRef,
   providers,
+  systemState,
   language,
   loading,
   lastUpdatedLabel,
@@ -33,6 +43,8 @@ export function UsagePanel({
   onOpenCompact,
   onClose,
 }: UsagePanelProps) {
+  const systemMetrics = systemState?.metrics ?? DEFAULT_SYSTEM_METRICS;
+
   if (mode === "compact") {
     return (
       <main className="compact-shell">
@@ -87,6 +99,7 @@ export function UsagePanel({
                 </article>
               ))}
             </div>
+            <CompactSystemSummary metrics={systemMetrics} />
           </div>
         </section>
       </main>
@@ -212,8 +225,70 @@ export function UsagePanel({
             );
           })}
         </section>
+        <SystemMonitor metrics={systemMetrics} />
       </section>
     </main>
+  );
+}
+
+function SystemMonitor({ metrics }: { metrics: SystemMetric[] }) {
+  return (
+    <section className="system-monitor" aria-label="System monitor">
+      <div className="system-monitor__title">System</div>
+      <div className="system-monitor__rows">
+        {metrics.map((metric) => (
+          <SystemMetricRow key={metric.id} metric={metric} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SystemMetricRow({ metric }: { metric: SystemMetric }) {
+  const percent = metric.percent ?? 0;
+  const level =
+    metric.id === "ram" && percent >= 80
+      ? "warning"
+      : percent >= 90
+        ? "danger"
+        : "normal";
+
+  return (
+    <div
+      className={`system-row system-row--${metric.id} system-row--${level}${
+        metric.available ? "" : " system-row--unavailable"
+      }`}
+    >
+      <span className="system-row__label">{metric.label}</span>
+      <div className="system-row__track" aria-hidden="true">
+        <div
+          className="system-row__fill"
+          style={{ width: `${clampPercent(percent)}%` }}
+        />
+      </div>
+      <strong className="system-row__readout">{metric.readout}</strong>
+    </div>
+  );
+}
+
+function CompactSystemSummary({ metrics }: { metrics: SystemMetric[] }) {
+  const visible = metrics.filter((metric) =>
+    ["cpu", "ram", "net"].includes(metric.id),
+  );
+
+  return (
+    <div className="compact-system" aria-label="System summary">
+      {visible.map((metric) => (
+        <span
+          key={metric.id}
+          className={`compact-system__item compact-system__item--${metric.id}`}
+          title={`${metric.label} ${metric.readout}`}
+        >
+          <span className="compact-system__label">{metric.label}</span>
+          <span className="compact-system__value">{metric.readout}</span>
+        </span>
+      ))}
+    </div>
   );
 }
 

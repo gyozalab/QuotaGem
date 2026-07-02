@@ -4,10 +4,11 @@ pub mod models;
 pub mod provider;
 pub mod providers;
 pub mod refresh;
+pub mod system;
 pub mod tray;
 pub mod windows;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
 /// 把回傳給前端的 preferences 的 launch_at_login 改成系統「實際」開機自啟狀態，
@@ -268,6 +269,11 @@ fn log_frontend_error(message: String) {
   crate::diag::log_line(&format!("FRONTEND_ERROR {}", message));
 }
 
+#[tauri::command]
+fn fetch_system_state(app: tauri::AppHandle) -> system::SystemState {
+  app.state::<system::SystemSampler>().snapshot()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -287,6 +293,7 @@ pub fn run() {
     .plugin(tauri_plugin_notification::init())
     .manage(windows::ExpandedWindowState::default())
     .manage(windows::PanelTimings::default())
+    .manage(system::SystemSampler::default())
     .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
     .invoke_handler(tauri::generate_handler![
       fetch_usage_state,
@@ -298,7 +305,8 @@ pub fn run() {
       sync_expanded_layout,
       refresh_usage,
       _test_simulate_save,
-      log_frontend_error
+      log_frontend_error,
+      fetch_system_state
     ])
     .on_window_event(|window, event| {
       if matches!(window.label(), "main" | "compact") {
@@ -319,6 +327,26 @@ pub fn run() {
       }
       windows::setup(app)?;
       tray::setup(app)?;
+      #[cfg(target_os = "macos")]
+      {
+        let handle = app.handle().clone();
+        std::thread::spawn(move || {
+          std::thread::sleep(std::time::Duration::from_millis(300));
+          let show_handle = handle.clone();
+          let _ = handle.run_on_main_thread(move || {
+            if let Some(window) = show_handle.get_webview_window("main") {
+              if let Some(compact) = show_handle.get_webview_window("compact") {
+                let _ = compact.hide();
+              }
+              let _ = window.set_size(tauri::LogicalSize::new(376.0, 680.0));
+              let _ = window.center();
+              let _ = window.show();
+              let _ = window.set_focus();
+              let _ = window.emit("usage:refreshRequested", ());
+            }
+          });
+        });
+      }
 
       // 一次性清掉 1.0（Electron）殘留的開機自啟機碼，避免升級者開機被空殼舊版佔位。
       cleanup_legacy_electron_autostart();

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import type { UsageDashboardState } from "../shared/dashboard";
+import type { SystemState, UsageDashboardState } from "../shared/dashboard";
 import { t, type WidgetLanguage } from "../shared/i18n";
 import {
   getPanelScaleFromSliderIndex,
@@ -43,6 +43,16 @@ const DEFAULT_PROVIDERS: NormalizedProviderUsage[] = [
   },
 ];
 
+const DEFAULT_SYSTEM_STATE: SystemState = {
+  metrics: [
+    { id: "cpu", label: "CPU", percent: null, readout: "—", available: false },
+    { id: "gpu", label: "GPU", percent: null, readout: "—", available: false },
+    { id: "ram", label: "RAM", percent: null, readout: "—", available: false },
+    { id: "net", label: "NET", percent: null, readout: "—", available: false },
+  ],
+  lastUpdated: "",
+};
+
 function getSurfaceMode(): SurfaceMode {
   const params = new URLSearchParams(window.location.search);
   return params.get("mode") === "compact" ? "compact" : "expanded";
@@ -68,7 +78,7 @@ function App() {
       notificationsEnabled: true,
       notificationLevel: "all",
       language: "zh-TW",
-      timeDisplay: "utc",
+      timeDisplay: "tst",
       timeFormat: "24h",
       dateFormat: "iso",
       panelScale: 100,
@@ -76,6 +86,7 @@ function App() {
       panelTone: "charcoal",
     },
   });
+  const [systemState, setSystemState] = useState<SystemState>(DEFAULT_SYSTEM_STATE);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState("");
@@ -91,8 +102,12 @@ function App() {
   async function loadState() {
     setLoading(true);
     try {
-      const nextState = await window.trayUsageWidget.fetchUsageState();
+      const [nextState, nextSystemState] = await Promise.all([
+        window.trayUsageWidget.fetchUsageState(),
+        window.trayUsageWidget.fetchSystemState().catch(() => DEFAULT_SYSTEM_STATE),
+      ]);
       setDashboardState(nextState);
+      setSystemState(nextSystemState);
       setDraftPreferences(nextState.preferences);
     } finally {
       setLoading(false);
@@ -182,6 +197,7 @@ function App() {
     loading,
     settingsOpen,
     surfaceMode,
+    systemState,
     visibleProviders,
   ]);
 
@@ -192,6 +208,7 @@ function App() {
           mode={surfaceMode}
           panelRef={surfaceMode === "expanded" ? expandedPanelRef : undefined}
           providers={visibleProviders}
+          systemState={systemState}
           language={visualPreferences.language}
           loading={loading}
           lastUpdatedLabel={dashboardState.lastUpdatedLabel}
@@ -426,10 +443,11 @@ function App() {
                 onChange={(event) => {
                   setDraftPreferences((current) => ({
                     ...current,
-                    timeDisplay: event.target.value as "utc" | "local",
+                    timeDisplay: event.target.value as "utc" | "tst" | "local",
                   }));
                 }}
               >
+                <option value="tst">TST (UTC+8)</option>
                 <option value="utc">UTC</option>
                 <option value="local">{t(language, "localTime")}</option>
               </select>

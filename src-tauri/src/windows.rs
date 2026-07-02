@@ -26,7 +26,7 @@ fn now_ms() -> i64 {
 const COMPACT_WINDOW_LABEL: &str = "compact";
 const EXPANDED_WINDOW_LABEL: &str = "main";
 const WINDOW_MARGIN: f64 = 14.0;
-const COMPACT_HEIGHT: f64 = 150.0;
+const COMPACT_HEIGHT: f64 = 174.0;
 const PANEL_SCALE_OPTIONS: [f64; 5] = [85.0, 100.0, 115.0, 130.0, 150.0];
 
 // expanded 面板基準（移植自 1.0 `expanded-layout.ts` / `panel-layout.ts`）
@@ -231,7 +231,7 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
         },
         1.0,
     );
-    let compact = WebviewWindowBuilder::new(
+    let compact_builder = WebviewWindowBuilder::new(
         app,
         COMPACT_WINDOW_LABEL,
         WebviewUrl::App("index.html?mode=compact".into()),
@@ -244,12 +244,13 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
     .visible(false)
     .focused(false)
     .decorations(false)
-    .transparent(true)
     .resizable(false)
     .skip_taskbar(true)
     .always_on_top(true)
-    .shadow(false)
-    .build()?;
+    .shadow(false);
+    #[cfg(windows)]
+    let compact_builder = compact_builder.transparent(true);
+    let compact = compact_builder.build()?;
 
     position_compact_window(&compact, &settings)?;
     diag::log_line("windows::setup complete (windows created hidden)");
@@ -609,14 +610,14 @@ mod tests {
             compact_layout(1, 100.0, work_area, 1.0),
             CompactLayout {
                 width: 200,
-                height: 150,
+                height: 174,
                 x: 1706,
-                y: 876,
+                y: 852,
                 zoom_factor: 1.0,
             }
         );
         assert_eq!(compact_layout(2, 85.0, work_area, 1.0).width, 180);
-        assert_eq!(compact_layout(2, 85.0, work_area, 1.0).height, 128);
+        assert_eq!(compact_layout(2, 85.0, work_area, 1.0).height, 148);
         assert_eq!(compact_layout(3, 100.0, work_area, 1.0).width, 296);
     }
 
@@ -632,9 +633,9 @@ mod tests {
         let layout = compact_layout(9, 150.0, work_area, 1.5);
 
         assert_eq!(layout.width, 444);
-        assert_eq!(layout.height, 225);
+        assert_eq!(layout.height, 261);
         assert_eq!(layout.x, 1813);
-        assert_eq!(layout.y, 1041);
+        assert_eq!(layout.y, 987);
         assert_eq!(layout.zoom_factor, 1.5);
     }
 }
