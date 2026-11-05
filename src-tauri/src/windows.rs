@@ -495,6 +495,33 @@ pub fn toggle_preferred_panel(app: &AppHandle) -> tauri::Result<()> {
     }
 }
 
+/// 全域快捷鍵的入口：面板開著就收起，關著才走托盤的顯示流程。
+///
+/// 托盤維持「永遠強制 show」（理由見 `toggle_preferred_panel`），這裡才看可見性。
+/// 視窗被壓在底層時 `is_visible` 仍回 true，第一次按會收起、第二次才顯示，
+/// 代價只是多按一次，托盤仍是保底入口。
+pub fn toggle_panel_from_shortcut(app: &AppHandle) -> tauri::Result<()> {
+    let any_visible = [EXPANDED_WINDOW_LABEL, COMPACT_WINDOW_LABEL]
+        .into_iter()
+        .filter_map(|label| app.get_webview_window(label))
+        .any(|window| window.is_visible().unwrap_or(false));
+
+    match panel_action(any_visible) {
+        PanelAction::Show => toggle_preferred_panel(app),
+        PanelAction::Hide => {
+            let timings = app.state::<PanelTimings>();
+            let now = now_ms();
+            if now - timings.last_toggle_at.load(Ordering::Relaxed) < TRAY_DEBOUNCE_MS {
+                diag::log_line("toggle_panel_from_shortcut:debounced");
+                return Ok(());
+            }
+            timings.last_toggle_at.store(now, Ordering::Relaxed);
+            diag::log_line("toggle_panel_from_shortcut:hide");
+            close_panels(app)
+        }
+    }
+}
+
 pub fn update_window_geometries(app: &AppHandle, settings: &AppStore) -> tauri::Result<()> {
     diag::log_line("update_window_geometries:enter");
     if let Some(compact) = app.get_webview_window(COMPACT_WINDOW_LABEL) {

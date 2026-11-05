@@ -1,4 +1,4 @@
-//! 全域快捷鍵：按一下顯示面板、再按一下隱藏（等同點托盤圖示）。
+//! 全域快捷鍵：按一下顯示面板、再按一下隱藏（托盤圖示只會顯示，這裡才會收起）。
 //!
 //! 快捷鍵字串由設定檔的 `globalShortcut` 決定（預設 `Ctrl+Alt+Q`），
 //! 空字串代表停用。格式由 tauri-plugin-global-shortcut 解析，例如
@@ -37,7 +37,7 @@ pub fn apply(app: &AppHandle, accelerator: &str) -> Result<(), String> {
             // 按下與放開都會觸發，只在按下時 toggle，避免連跳兩次。
             if event.state() == ShortcutState::Pressed {
                 crate::diag::log_line("shortcut:pressed -> toggle");
-                let _ = crate::windows::toggle_preferred_panel(app);
+                let _ = crate::windows::toggle_panel_from_shortcut(app);
             }
         })
         .map_err(|e| format!("註冊快捷鍵「{}」失敗（可能已被其他程式占用）: {e}", accelerator.trim()))?;
