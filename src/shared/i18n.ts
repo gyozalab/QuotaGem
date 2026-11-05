@@ -11,6 +11,7 @@ type TranslationKey =
   | "fiveHourShort"
   | "weeklyShort"
   | "resets"
+  | "resetsSoon"
   | "unavailable"
   | "live"
   | "localSuffix"
@@ -21,6 +22,7 @@ type TranslationKey =
   | "waitingForClaudeLogin"
   | "preferredDisplayMode"
   | "launchAtLogin"
+  | "globalShortcut"
   | "providerVisibility"
   | "expandedPanel"
   | "compactPanel"
@@ -94,6 +96,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     fiveHourShort: "5h",
     weeklyShort: "Weekly",
     resets: "Resets",
+    resetsSoon: "Resetting soon",
     unavailable: "Unavailable",
     live: "Live",
     localSuffix: "Local",
@@ -104,6 +107,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     waitingForClaudeLogin: "Waiting for Claude login...",
     preferredDisplayMode: "Default panel to open",
     launchAtLogin: "Launch on Windows sign-in",
+    globalShortcut: "Global shortcut (blank to disable)",
     providerVisibility: "Show providers",
     expandedPanel: "Expanded panel",
     compactPanel: "Compact panel",
@@ -179,6 +183,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     fiveHourShort: "5h",
     weeklyShort: "週",
     resets: "重設",
+    resetsSoon: "即將重置",
     unavailable: "無法取得",
     live: "即時",
     localSuffix: "本機",
@@ -189,6 +194,7 @@ const translations: Record<WidgetLanguage, Record<TranslationKey, string>> = {
     waitingForClaudeLogin: "等待 Claude 登入中...",
     preferredDisplayMode: "預設開啟面板",
     launchAtLogin: "Windows 登入時啟動",
+    globalShortcut: "全域快捷鍵（留空停用）",
     providerVisibility: "顯示項目",
     expandedPanel: "大面板",
     compactPanel: "小面板",

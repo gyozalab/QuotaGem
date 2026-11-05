@@ -9,7 +9,15 @@ const options = {
 };
 
 describe("normalizeProviderUsage with provider groups", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("normalizes per-group tracks and renders null tracks as unavailable", () => {
+    // 固定「現在」讓相對倒數可預期：group[0].session reset = +3h
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-19T12:57:12Z"));
+
     const snapshot: ProviderUsageSnapshot = {
       provider: "antigravity",
       displayName: "Antigravity",
@@ -42,7 +50,7 @@ describe("normalizeProviderUsage with provider groups", () => {
     expect(normalized.groups).toHaveLength(2);
     expect(normalized.groups?.[0].label).toBe("Gemini Models");
     expect(normalized.groups?.[0].session.percent).toBe(0.32);
-    expect(normalized.groups?.[0].session.resetLabel).toBe("2026-06-19 15:57 UTC");
+    expect(normalized.groups?.[0].session.resetLabel).toBe("in 3 hours");
     // null 軌 → percent 0、resetLabel 顯示 unavailable
     expect(normalized.groups?.[1].weekly.percent).toBe(0);
     expect(normalized.groups?.[1].weekly.resetLabel).toBe(t("en", "unavailable"));

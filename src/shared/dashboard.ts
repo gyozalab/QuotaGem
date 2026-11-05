@@ -26,6 +26,8 @@ export interface WidgetPreferences {
   panelScale: PanelScalePercent;
   panelOpacity: number;
   panelTone: PanelTone;
+  /** 全域快捷鍵（例如 "Ctrl+Alt+Q"），空字串代表停用。 */
+  globalShortcut: string;
 }
 
 export interface UsageDashboardState {

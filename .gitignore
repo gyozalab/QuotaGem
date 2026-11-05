@@ -1,8 +1,13 @@
 node_modules/
+# Generated Rust build output
+target/
 dist/
 dist-electron/
 *.tsbuildinfo
 claude-debug.json
 release/
+# Workspace-local linked worktrees and release scratch trees
+.worktrees/
+tmp/
 # Antigravity probe captures — contain account PII (email/plan). Never commit.
 scripts/agy_*.json

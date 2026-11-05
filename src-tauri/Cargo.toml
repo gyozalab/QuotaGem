@@ -26,6 +26,7 @@ tauri-plugin-log = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-global-shortcut = "2"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "cookies"] }
 anyhow = "1.0"
@@ -45,4 +46,10 @@ windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Threading",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_Networking_WinSock",
 ] }
+# sysinfo：Antigravity 探測列舉程序（名稱、PID、命令列），取代每輪 spawn powershell.exe。
+# 0.37 是最後一版接受 windows 0.61 的 sysinfo（0.38 起要 0.62），沿用 tauri 已鎖定的
+# windows 0.61.3，不新增第二個 windows 版本。
+sysinfo = { version = "0.37", default-features = false, features = ["system"] }

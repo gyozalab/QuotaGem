@@ -88,14 +88,7 @@ export function normalizeProviderUsage(
       resetLabel:
         percent === null
           ? t(options.language, "unavailable")
-          : formatResetDisplay(
-              resetAt,
-              options.language,
-              options.timeDisplay,
-              options.timeFormat,
-              options.dateFormat,
-              options.locale,
-            ),
+          : formatResetCountdown(resetAt, options.language),
       level: getUsageLevel(safePercent, thresholds),
     };
   };
@@ -154,7 +147,53 @@ function getUsageLevel(
   return "normal";
 }
 
-function formatResetDisplay(
+/** 把 number(epoch 秒) / ISO 字串 / Date / null 統一解析成 Date；壞值回 null。 */
+export function toResetDate(value: number | string | Date | null): Date | null {
+  if (value === null || value === "") {
+    return null;
+  }
+  const date =
+    value instanceof Date
+      ? value
+      : typeof value === "number"
+        ? new Date(value * 1000)
+        : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * 把重置時間顯示成相對倒數（例如「3 小時後」/「in 3 hours」）。
+ * 用 Intl.RelativeTimeFormat 產生在地化字串；倒數是時間長度，與時區無關。
+ */
+export function formatResetCountdown(
+  value: number | string | Date | null,
+  language: WidgetLanguage,
+  now: number = Date.now(),
+): string {
+  const date = toResetDate(value);
+  if (date === null) {
+    return t(language, "unavailable");
+  }
+
+  const diffMs = date.getTime() - now;
+  if (diffMs <= 60_000) {
+    // 已重置或不到一分鐘 → 即將重置
+    return t(language, "resetsSoon");
+  }
+
+  const rtf = new Intl.RelativeTimeFormat(language, { numeric: "always" });
+  if (diffMs >= 86_400_000) {
+    // >= 1 天（週額度重置常在數天後）
+    return rtf.format(Math.round(diffMs / 86_400_000), "day");
+  }
+  if (diffMs >= 3_600_000) {
+    return rtf.format(Math.round(diffMs / 3_600_000), "hour");
+  }
+  return rtf.format(Math.max(1, Math.round(diffMs / 60_000)), "minute");
+}
+
+// 保留：絕對時間格式。面板現改用倒數，此函式留作未來「絕對時間」選項備用。
+export function formatResetDisplay(
   value: number | string | Date | null,
   language: WidgetLanguage,
   timeDisplay: "utc" | "local",

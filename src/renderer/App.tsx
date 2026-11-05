@@ -74,6 +74,7 @@ function App() {
       panelScale: 100,
       panelOpacity: 90,
       panelTone: "charcoal",
+      globalShortcut: "Ctrl+Alt+Q",
     },
   });
   const [loading, setLoading] = useState(true);
@@ -308,6 +309,21 @@ function App() {
                   setDraftPreferences((current) => ({
                     ...current,
                     launchAtLogin: event.target.checked,
+                  }));
+                }}
+              />
+            </label>
+            <label className="settings-field">
+              <span>{t(language, "globalShortcut")}</span>
+              <input
+                type="text"
+                value={draftPreferences.globalShortcut}
+                placeholder="Ctrl+Alt+Q"
+                spellCheck={false}
+                onChange={(event) => {
+                  setDraftPreferences((current) => ({
+                    ...current,
+                    globalShortcut: event.target.value,
                   }));
                 }}
               />

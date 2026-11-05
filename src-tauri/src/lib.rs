@@ -4,6 +4,7 @@ pub mod models;
 pub mod provider;
 pub mod providers;
 pub mod refresh;
+pub mod shortcut;
 pub mod tray;
 pub mod windows;
 
@@ -77,6 +78,8 @@ async fn save_settings(
     preferences.provider_visibility.antigravity,
     preferences.preferred_display_mode
   ));
+  // 先驗證快捷鍵格式，格式錯誤就整筆拒絕儲存，讓前端顯示錯誤、不污染設定檔。
+  shortcut::parse(&preferences.global_shortcut)?;
   let mut store = models::load_settings();
   store.preferred_display_mode = Some(preferences.preferred_display_mode);
   store.launch_at_login = Some(preferences.launch_at_login);
@@ -93,8 +96,14 @@ async fn save_settings(
   store.panel_scale = Some(preferences.panel_scale);
   store.panel_opacity = Some(preferences.panel_opacity);
   store.panel_tone = Some(preferences.panel_tone);
+  store.global_shortcut = Some(preferences.global_shortcut.clone());
 
   models::save_settings(&store).map_err(|e| e.to_string())?;
+
+  // 套用新快捷鍵；被其他程式占用時設定仍已儲存，錯誤只寫進 log（不阻斷其他設定）。
+  if let Err(error) = shortcut::apply(&app, &preferences.global_shortcut) {
+    crate::diag::log_line(&format!("save_settings:shortcut_failed {}", error));
+  }
 
   let autostart = app.autolaunch();
   if preferences.launch_at_login {
@@ -187,6 +196,11 @@ async fn connect_claude(
   store.panel_scale = Some(preferences.panel_scale);
   store.panel_opacity = Some(preferences.panel_opacity);
   store.panel_tone = Some(preferences.panel_tone);
+  // 快捷鍵格式不合就沿用舊值，不讓連接 Claude 的流程因此失敗。
+  if shortcut::parse(&preferences.global_shortcut).is_ok() {
+    store.global_shortcut = Some(preferences.global_shortcut.clone());
+    let _ = shortcut::apply(&app, &preferences.global_shortcut);
+  }
 
   models::save_settings(&store).map_err(|e| e.to_string())?;
 
@@ -285,6 +299,7 @@ pub fn run() {
     }))
     .plugin(tauri_plugin_autostart::Builder::default().build())
     .plugin(tauri_plugin_notification::init())
+    .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .manage(windows::ExpandedWindowState::default())
     .manage(windows::PanelTimings::default())
     .manage(std::sync::Mutex::new(alerts::AlertTracker::new()))
@@ -319,6 +334,16 @@ pub fn run() {
       }
       windows::setup(app)?;
       tray::setup(app)?;
+
+      // 全域快捷鍵：依儲存偏好註冊（預設 Ctrl+Alt+Q）。被占用或格式錯誤不致命，只記 log。
+      {
+        let accelerator = models::load_settings()
+          .global_shortcut
+          .unwrap_or_else(|| shortcut::DEFAULT_SHORTCUT.to_string());
+        if let Err(error) = shortcut::apply(app.handle(), &accelerator) {
+          crate::diag::log_line(&format!("setup:shortcut_failed {}", error));
+        }
+      }
 
       // 一次性清掉 1.0（Electron）殘留的開機自啟機碼，避免升級者開機被空殼舊版佔位。
       cleanup_legacy_electron_autostart();

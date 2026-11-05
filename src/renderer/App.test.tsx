@@ -46,6 +46,7 @@ function createDashboardState(
       panelOpacity: 90,
       panelTone: "charcoal",
       launchAtLogin: false,
+      globalShortcut: "Ctrl+Alt+Q",
       ...overrides,
     },
   };
@@ -207,6 +208,27 @@ describe("App", () => {
           }),
         );
       });
+  });
+
+  it("lets people change or clear the global shortcut", async () => {
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open settings" }),
+    );
+
+    const shortcut = await screen.findByLabelText("Global shortcut (blank to disable)");
+    expect(shortcut).toHaveValue("Ctrl+Alt+Q");
+
+    await userEvent.clear(shortcut);
+    await userEvent.type(shortcut, "Ctrl+Shift+F9");
+    await userEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+
+    await waitFor(() => {
+      expect(window.trayUsageWidget.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ globalShortcut: "Ctrl+Shift+F9" }),
+      );
+    });
   });
 
   it("preserves provider visibility draft when connecting Claude", async () => {

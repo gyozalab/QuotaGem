@@ -44,6 +44,117 @@ impl CodexProvider {
     }
 }
 
+// ── 直打 backend-api 主路徑：讀 ~/.codex/auth.json，單次 HTTPS 拿 rate limit ──
+// 對照 app-server 路徑（spawn 整個 codex 當常駐 server，約 142MB），這條只發一個
+// GET /wham/usage，零常駐行程。token 過期（非 2xx）時自動退回 app-server，由 codex
+// CLI 幫忙 refresh，因此穩態下維持零常駐。
+
+#[derive(Deserialize, Debug)]
+struct CodexAuthTokens {
+    access_token: Option<String>,
+    account_id: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+struct CodexAuthFile {
+    tokens: Option<CodexAuthTokens>,
+}
+
+/// 解析 `GET /backend-api/wham/usage` 回應，產出 UsageSnapshot。純函式，方便 fixture 測試。
+fn parse_wham_usage(body: &serde_json::Value) -> anyhow::Result<UsageSnapshot> {
+    let rate_limit = body
+        .get("rate_limit")
+        .ok_or_else(|| anyhow::anyhow!("/wham/usage 回應缺少 rate_limit"))?;
+
+    let mut session_percent = 0.0_f64;
+    let mut session_reset_at: Option<serde_json::Value> = None;
+    let mut weekly_percent = 0.0_f64;
+    let mut weekly_reset_at: Option<serde_json::Value> = None;
+    let mut found = false;
+
+    // primary_window / secondary_window 哪個是 5h、哪個是週，依 limit_window_seconds 判斷。
+    for key in ["primary_window", "secondary_window"] {
+        let window = match rate_limit.get(key) {
+            Some(w) if !w.is_null() => w,
+            _ => continue,
+        };
+        let used = match window.get("used_percent").and_then(|v| v.as_f64()) {
+            Some(u) => u,
+            None => continue,
+        };
+        let dur_secs = window
+            .get("limit_window_seconds")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
+        let reset = window.get("reset_at").cloned();
+        found = true;
+        if dur_secs <= 21600 {
+            // <= 6 小時 → 5 小時視窗
+            session_percent = used;
+            session_reset_at = reset;
+        } else {
+            // 週視窗
+            weekly_percent = used;
+            weekly_reset_at = reset;
+        }
+    }
+
+    if !found {
+        return Err(anyhow::anyhow!("/wham/usage 沒有可用的視窗資料"));
+    }
+
+    Ok(UsageSnapshot {
+        provider: ProviderId::Codex,
+        display_name: "Codex".to_string(),
+        session_percent,
+        session_reset_at,
+        weekly_percent,
+        weekly_reset_at,
+        last_updated: Utc::now().to_rfc3339(),
+        health: Some(ProviderHealth::Available),
+        groups: None,
+    })
+}
+
+/// 讀 ~/.codex/auth.json 的 access_token / account_id，直打 backend-api 拿 rate limit。
+async fn query_http_usage() -> anyhow::Result<UsageSnapshot> {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .map(PathBuf::from)
+        .map_err(|_| anyhow::anyhow!("找不到家目錄"))?;
+    let auth_path = home.join(".codex").join("auth.json");
+    let content = std::fs::read_to_string(&auth_path)
+        .map_err(|e| anyhow::anyhow!("讀取 ~/.codex/auth.json 失敗: {}", e))?;
+    let auth: CodexAuthFile = serde_json::from_str(&content)?;
+    let tokens = auth
+        .tokens
+        .ok_or_else(|| anyhow::anyhow!("auth.json 缺少 tokens"))?;
+    let access_token = tokens
+        .access_token
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow::anyhow!("auth.json 缺少 access_token"))?;
+    let account_id = tokens.account_id.unwrap_or_default();
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .unwrap_or_default();
+    let mut req = client
+        .get("https://chatgpt.com/backend-api/wham/usage")
+        .header("Authorization", format!("Bearer {}", access_token));
+    if !account_id.is_empty() {
+        req = req.header("ChatGPT-Account-Id", account_id);
+    }
+
+    let res = req.send().await?;
+    let status = res.status();
+    if !status.is_success() {
+        return Err(anyhow::anyhow!("/wham/usage 回應狀態 {}", status));
+    }
+    let body: serde_json::Value = res.json().await?;
+    parse_wham_usage(&body)
+}
+
 // ── app-server 主路徑：spawn `codex app-server`，JSON-RPC over stdio ─────────
 
 /// 解析 `account/rateLimits/read` 回應的 `result` 物件，產出 UsageSnapshot。
@@ -325,7 +436,18 @@ fn snapshot_from_jsonl() -> anyhow::Result<UsageSnapshot> {
 #[async_trait]
 impl Provider for CodexProvider {
     async fn snapshot(&self) -> anyhow::Result<UsageSnapshot> {
-        // 主路徑：app-server 即時值（含背景消耗），8 秒逾時。
+        // 主路徑：直打 backend-api /wham/usage（單次 HTTPS，零常駐行程），10 秒逾時。
+        match tokio::time::timeout(Duration::from_secs(10), query_http_usage()).await {
+            Ok(Ok(snapshot)) => return Ok(snapshot),
+            Ok(Err(e)) => {
+                log::warn!("Codex 直打 /wham/usage 失敗，改用 app-server: {}", e);
+            }
+            Err(_) => {
+                log::warn!("Codex 直打 /wham/usage 逾時，改用 app-server");
+            }
+        }
+
+        // Fallback 1：app-server 即時值（會自動 refresh token），8 秒逾時。
         let codex = find_codex_command();
         match tokio::time::timeout(Duration::from_secs(8), query_app_server(codex)).await {
             Ok(Ok(snapshot)) => return Ok(snapshot),
@@ -337,7 +459,7 @@ impl Provider for CodexProvider {
             }
         }
 
-        // Fallback：舊 session JSONL（可能偏舊，但比 Unavailable 好）。
+        // Fallback 2：舊 session JSONL（可能偏舊，但比 Unavailable 好）。
         snapshot_from_jsonl()
     }
 }
@@ -385,6 +507,24 @@ mod tests {
     fn parse_errors_when_no_windows() {
         let result = serde_json::json!({ "rateLimits": {} });
         assert!(parse_rate_limits_response(&result).is_err());
+    }
+
+    #[test]
+    fn parse_wham_maps_windows_by_duration() {
+        // GET /wham/usage 實測結構：primary_window=5h、secondary_window=週
+        let body = serde_json::json!({
+            "plan_type": "plus",
+            "rate_limit": {
+                "primary_window":   { "used_percent": 83, "limit_window_seconds": 18000,  "reset_at": 1782671414i64 },
+                "secondary_window": { "used_percent": 13, "limit_window_seconds": 604800, "reset_at": 1782994735i64 }
+            }
+        });
+        let snap = parse_wham_usage(&body).unwrap();
+        assert_eq!(snap.provider, ProviderId::Codex);
+        assert_eq!(snap.session_percent, 83.0);
+        assert_eq!(snap.weekly_percent, 13.0);
+        assert_eq!(snap.session_reset_at.as_ref().unwrap().as_i64(), Some(1782671414));
+        assert_eq!(snap.weekly_reset_at.as_ref().unwrap().as_i64(), Some(1782994735));
     }
 
     #[tokio::test]

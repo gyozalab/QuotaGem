@@ -67,6 +67,7 @@ pub struct WidgetPreferences {
     pub panel_scale: f64,
     pub panel_opacity: f64,
     pub panel_tone: String,
+    pub global_shortcut: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +90,7 @@ pub struct AppStore {
     pub panel_scale: Option<f64>,
     pub panel_opacity: Option<f64>,
     pub panel_tone: Option<String>,
+    pub global_shortcut: Option<String>,
 }
 
 impl Default for AppStore {
@@ -111,6 +113,7 @@ impl Default for AppStore {
             panel_scale: Some(100.0),
             panel_opacity: Some(90.0),
             panel_tone: Some("charcoal".to_string()),
+            global_shortcut: Some(crate::shortcut::DEFAULT_SHORTCUT.to_string()),
         }
     }
 }
@@ -197,6 +200,7 @@ impl AppStore {
             panel_scale: self.panel_scale.unwrap_or(100.0),
             panel_opacity: self.panel_opacity.unwrap_or(90.0),
             panel_tone: self.panel_tone.clone().unwrap_or_else(|| "charcoal".to_string()),
+            global_shortcut: self.global_shortcut.clone().unwrap_or_else(|| crate::shortcut::DEFAULT_SHORTCUT.to_string()),
         }
     }
 }
